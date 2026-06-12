@@ -732,6 +732,50 @@ function readBody(req) {
   });
 }
 
+function clientJs() {
+  return `
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("[data-terminal]").forEach((terminal) => {
+    const challengeId = terminal.dataset.terminal;
+    const form = terminal.querySelector("[data-terminal-form]");
+    const input = terminal.querySelector("[data-terminal-input]");
+    const screen = terminal.querySelector("[data-terminal-screen]");
+    const appendLine = (text, className = "") => {
+      const line = document.createElement("span");
+      line.className = "terminal-line " + className;
+      line.textContent = text;
+      screen.appendChild(line);
+      screen.scrollTop = screen.scrollHeight;
+    };
+    const runCommand = async (command) => {
+      const trimmed = command.trim();
+      if (!trimmed) return;
+      appendLine("student@cyberedukz:~$ " + trimmed, "prompt");
+      input.value = "";
+      try {
+        const response = await fetch("/challenge/" + encodeURIComponent(challengeId) + "/terminal", {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ command: trimmed })
+        });
+        const payload = await response.json();
+        appendLine(payload.output || "", payload.ok ? "" : "error");
+      } catch (error) {
+        appendLine("Terminal error. Try again.", "error");
+      }
+    };
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      runCommand(input.value);
+    });
+    terminal.querySelectorAll("[data-command]").forEach((button) => {
+      button.addEventListener("click", () => runCommand(button.dataset.command));
+    });
+  });
+});
+`;
+}
+
 function solvedChallengeIds(db, user) {
   if (!user) return new Set();
   return new Set(
@@ -797,6 +841,7 @@ function layout({ title, user, body }) {
       </nav>
     </header>
     <main>${body}</main>
+    <script src="/app.js"></script>
   </body>
 </html>`;
 }
@@ -830,8 +875,15 @@ body{background:linear-gradient(180deg,#060914 0%,#08101b 46%,#0a111d 100%);lett
 .artifact td{color:#dbeafe}
 .lab-note{padding:14px 16px;border:1px solid rgba(96,165,250,.24);border-radius:8px;background:rgba(96,165,250,.07);color:#cfe3ff;line-height:1.55}
 .cmd{color:#5eead4}.output{color:#cbd5e1}.flag-line{color:#fbbf24;font-weight:800}.risk{color:#fecdd3}
+.mini-terminal{display:grid;gap:12px}
+.terminal-screen{min-height:240px;max-height:420px;overflow:auto;white-space:pre-wrap}
+.terminal-input{display:grid;grid-template-columns:1fr auto;gap:10px}
+.terminal-input input{font-family:Consolas,'Courier New',monospace}
+.command-palette{display:flex;flex-wrap:wrap;gap:8px}
+.command-palette button{min-height:32px;padding:0 10px;border:1px solid rgba(94,234,212,.28);border-radius:6px;background:rgba(20,184,166,.08);color:#99f6e4;font:13px Consolas,'Courier New',monospace;cursor:pointer}
+.terminal-line{display:block}.terminal-line.prompt{color:#5eead4}.terminal-line.error{color:#fecdd3}
 @media(max-width:980px){.hero{grid-template-columns:1fr;min-height:auto}.visual{min-height:340px;order:-1}.hero h1{font-size:40px}}
-@media(max-width:560px){.hero{width:min(100% - 24px,1180px);padding-top:24px}.visual{min-height:260px}.visual:after{display:none}.hero h1{font-size:34px}.actions .button-link{width:100%}.stats{grid-template-columns:1fr}}`;
+@media(max-width:560px){.hero{width:min(100% - 24px,1180px);padding-top:24px}.visual{min-height:260px}.visual:after{display:none}.hero h1{font-size:34px}.actions .button-link{width:100%}.stats{grid-template-columns:1fr}.terminal-input{grid-template-columns:1fr}}`;
 };
 
 function home(req, res) {
@@ -1265,7 +1317,8 @@ function practicePanel(challenge) {
   if (!practice) {
     return `<div class="challenge lab-panel"><h3>Практический материал</h3><p class="muted">Для этого задания практический артефакт ещё не добавлен.</p></div>`;
   }
-  const terminal = practice.terminal
+  const interactive = interactiveTerminal(challenge.id);
+  const terminal = practice.terminal && !interactive
     ? `<pre class="lab-terminal">${practice.terminal
         .map(([label, value]) => {
           const className = label === "flag" ? "flag-line" : label ? "cmd" : "output";
@@ -1282,9 +1335,74 @@ function practicePanel(challenge) {
   return `<div class="challenge lab-panel">
     <h3>${escapeHtml(practice.title)}</h3>
     <div class="lab-note">${escapeHtml(practice.note)}</div>
+    ${interactive}
     ${table}
     ${terminal}
   </div>`;
+}
+
+function interactiveTerminal(challengeId) {
+  const commands = {
+    "linux-hidden-file": ["pwd", "ls", "ls -la", "cat notes.txt", "cat .flag"],
+    "linux-open-port": ["cat scan-result.txt", "grep open scan-result.txt", "cat conclusion.txt"],
+  }[challengeId];
+  if (!commands) return "";
+  return `<div class="mini-terminal" data-terminal="${escapeHtml(challengeId)}">
+    <div class="command-palette">${commands.map((command) => `<button type="button" data-command="${escapeHtml(command)}">${escapeHtml(command)}</button>`).join("")}</div>
+    <pre class="lab-terminal terminal-screen" data-terminal-screen><span class="terminal-line output">Введите команду или нажмите готовую команду выше. Начните с help, если не знаете что делать.</span></pre>
+    <form class="terminal-input" data-terminal-form>
+      <input data-terminal-input autocomplete="off" spellcheck="false" placeholder="Например: ls -la">
+      <button class="button primary" type="submit">Выполнить</button>
+    </form>
+  </div>`;
+}
+
+function terminalOutput(challengeId, command) {
+  const normalized = String(command || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const labs = {
+    "linux-hidden-file": {
+      help: "Доступные команды: pwd, ls, ls -la, cat notes.txt, cat report.txt, cat .flag",
+      pwd: "/home/student",
+      ls: "notes.txt  report.txt",
+      "ls -la": [
+        "drwxr-xr-x  2 student student 4096 Jun 12 .",
+        "drwxr-xr-x 12 root    root    4096 Jun 12 ..",
+        "-rw-r--r--  1 student student   23 Jun 12 .flag",
+        "-rw-r--r--  1 student student  118 Jun 12 notes.txt",
+        "-rw-r--r--  1 student student  221 Jun 12 report.txt",
+      ].join("\n"),
+      "cat notes.txt": "Заметка: обычный ls скрытые файлы не показывает. Попробуй ls -la.",
+      "cat report.txt": "Отчёт: в домашней директории есть учебный артефакт, начинающийся с точки.",
+      "cat .flag": "CYB{hidden_file_found}",
+    },
+    "linux-open-port": {
+      help: "Доступные команды: cat scan-result.txt, grep open scan-result.txt, cat conclusion.txt",
+      "cat scan-result.txt": [
+        "Nmap scan report for training-box.local (10.10.10.15)",
+        "PORT     STATE  SERVICE",
+        "22/tcp   closed ssh",
+        "80/tcp   open   http",
+        "443/tcp  closed https",
+      ].join("\n"),
+      "grep open scan-result.txt": "80/tcp   open   http",
+      "cat conclusion.txt": "CYB{port_80_http}",
+    },
+  };
+  const lab = labs[challengeId];
+  if (!lab) return { ok: false, output: "Для этого задания интерактивный терминал ещё не подключён." };
+  const output = lab[normalized];
+  if (!output) return { ok: false, output: `command not found: ${command}\nВведите help, чтобы увидеть доступные команды.` };
+  return { ok: true, output };
+}
+
+async function terminalCommand(req, res, id) {
+  const user = getCurrentUser(req);
+  if (!user) return sendJson(res, { ok: false, output: "Нужно войти в аккаунт." }, 401);
+  const db = readDb();
+  const challenge = db.challenges.find((item) => item.id === id);
+  if (!challenge) return sendJson(res, { ok: false, output: "Задание не найдено." }, 404);
+  const form = await readBody(req);
+  return sendJson(res, terminalOutput(id, form.get("command")));
 }
 
 function challengePage(req, res, id, message = "") {
@@ -1827,6 +1945,10 @@ async function router(req, res) {
     res.writeHead(200, { "Content-Type": "text/css; charset=utf-8" });
     return res.end(css());
   }
+  if (url.pathname === "/app.js") {
+    res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8" });
+    return res.end(clientJs());
+  }
   if (url.pathname === "/cyber-grid.svg") {
     res.writeHead(200, { "Content-Type": "image/svg+xml; charset=utf-8" });
     return res.end(fs.readFileSync(path.join(__dirname, "public", "cyber-grid.svg")));
@@ -1878,6 +2000,9 @@ async function router(req, res) {
   }
   if (req.method === "GET" && url.pathname.startsWith("/challenge/")) {
     return challengePage(req, res, decodeURIComponent(url.pathname.split("/")[2]));
+  }
+  if (req.method === "POST" && url.pathname.startsWith("/challenge/") && url.pathname.endsWith("/terminal")) {
+    return terminalCommand(req, res, decodeURIComponent(url.pathname.split("/")[2]));
   }
   if (req.method === "POST" && url.pathname.startsWith("/challenge/") && url.pathname.endsWith("/submit")) {
     return submitFlag(req, res, decodeURIComponent(url.pathname.split("/")[2]));
