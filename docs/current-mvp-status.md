@@ -30,6 +30,7 @@ http://localhost:3000
 15. Profile shows overall progress and recent solved challenges.
 16. Admin panel shows content KPIs for courses, lessons, and challenges.
 17. Automated smoke test verifies public routes, auth flow, flag submission, admin access, and safe submissions.
+18. Landing page uses a generated CyberEdu KZ hero image for a more presentation-ready visual style.
 
 ## Demo Content
 
@@ -38,6 +39,9 @@ Courses:
 - Linux & Networks Basics
 - Web Security Starter
 - Blue Team Fundamentals
+- Red Team Basics
+- Digital Forensics Starter
+- AppSec & Secure SDLC KZ
 
 Lessons:
 
@@ -56,6 +60,12 @@ Demo flags:
 - `CYB{reflected_xss}`
 - `CYB{brute_force_alert}`
 - `CYB{incident_timeline}`
+- `CYB{scope_checked}`
+- `CYB{report_the_finding}`
+- `CYB{metadata_author}`
+- `CYB{timeline_ordered}`
+- `CYB{secret_asset_mapped}`
+- `CYB{clean_logs_no_secrets}`
 
 ## Jira Tasks That Can Move To Done
 
@@ -77,8 +87,7 @@ Demo flags:
 
 ## Next Product Work
 
-- Add more polished challenge workspace UI.
-- Continue visual design polish in a final pass.
+- Continue detailed visual design polish after user-specific corrections.
 - Prepare screenshots if required by the instructor.
 - Apply the user's upcoming site corrections.
 

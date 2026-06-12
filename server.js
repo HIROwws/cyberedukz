@@ -50,6 +50,14 @@ const COURSES = [
     description:
       "Файловые артефакты, метаданные, таймлайны и базовая аналитика цифровых следов.",
   },
+  {
+    slug: "appsec-kz",
+    title: "AppSec & Secure SDLC KZ",
+    track: "AppSec",
+    difficulty: "Easy",
+    description:
+      "Secure SDLC, OWASP Top 10, обработка персональных данных и практики безопасной разработки для продуктовых команд Казахстана.",
+  },
 ];
 
 const LESSONS = [
@@ -142,6 +150,24 @@ const LESSONS = [
     summary: "Как собрать несколько следов в единую историю.",
     theory:
       "Таймлайн связывает события по времени. Это помогает отделить первичное событие от последствий и объяснить инцидент без хаоса в деталях.",
+  },
+  {
+    id: "appsec-threat-model",
+    courseSlug: "appsec-kz",
+    order: 1,
+    title: "Threat Modeling для веб-продукта",
+    summary: "Как до разработки найти активы, злоупотребления и защитные меры.",
+    theory:
+      "Threat Modeling помогает команде заранее понять, какие данные и сценарии важны, где возможны ошибки доступа, какие доверенные границы есть в системе и какие меры защиты нужно добавить до релиза.",
+  },
+  {
+    id: "appsec-data-protection",
+    courseSlug: "appsec-kz",
+    order: 2,
+    title: "Персональные данные и безопасное хранение",
+    summary: "Минимизация данных, хеширование секретов и аккуратная работа с логами.",
+    theory:
+      "Для продукта в Казахстане важно проектировать обработку персональных данных осознанно: хранить только нужное, не писать секреты в логи, разделять роли доступа и фиксировать действия администратора.",
   },
 ];
 
@@ -265,6 +291,30 @@ const CHALLENGES = [
       "События A, B и C нужно расположить по времени. Отправь флаг, подтверждающий корректный таймлайн.",
     hint: "Флаг связан с timeline order.",
     flag: "CYB{timeline_ordered}",
+  },
+  {
+    id: "appsec-asset-map",
+    lessonId: "appsec-threat-model",
+    courseSlug: "appsec-kz",
+    title: "Карта активов",
+    points: 160,
+    difficulty: "Easy",
+    description:
+      "Команда проектирует учебную платформу. Нужно определить самый чувствительный актив в сценарии: пароль, флаг, публичное описание курса или цвет кнопки.",
+    hint: "Флаг связан с идеей secret asset.",
+    flag: "CYB{secret_asset_mapped}",
+  },
+  {
+    id: "appsec-log-hygiene",
+    lessonId: "appsec-data-protection",
+    courseSlug: "appsec-kz",
+    title: "Гигиена логов",
+    points: 160,
+    difficulty: "Easy",
+    description:
+      "В логах обнаружили email, session token и submitted flag. Отправь флаг, если понял, что секреты и ответы нельзя хранить в открытом виде.",
+    hint: "Флаг связан с log hygiene.",
+    flag: "CYB{clean_logs_no_secrets}",
   },
 ];
 
@@ -756,6 +806,25 @@ function layout({ title, user, body }) {
 function css() {
   return `:root{--bg:#070b14;--surface:#0f172a;--surface2:#111827;--ink:#e5edf7;--muted:#94a3b8;--line:#253247;--accent:#14b8a6;--blue:#60a5fa;--danger:#fb7185}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top left,rgba(20,184,166,.12),transparent 32rem),var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}a{color:inherit;text-decoration:none}.muted{color:var(--muted);line-height:1.5}.app-header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;min-height:64px;padding:0 32px;background:rgba(7,11,20,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(16px)}.brand{font-size:20px;font-weight:800}.nav{display:flex;align-items:center;gap:18px;color:var(--muted);font-size:14px}.nav a:hover{color:white}.nav form{margin:0}.nav button{border:0;background:transparent;color:var(--muted);font:inherit;cursor:pointer}.page{width:min(1120px,calc(100% - 32px));margin:0 auto;padding:44px 0}.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.82fr);gap:40px;min-height:620px;align-items:center}.hero h1{margin:14px 0 0;font-size:52px;line-height:1.05}.hero p,.section-copy{color:var(--muted);font-size:18px;line-height:1.6}.visual{min-height:360px;border:1px solid var(--line);border-radius:8px;background:linear-gradient(90deg,rgba(7,11,20,.2),rgba(7,11,20,.4)),url('/cyber-grid.svg') center/cover;box-shadow:0 24px 80px rgba(0,0,0,.35)}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}.button,.button-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink);font-weight:800;cursor:pointer}.button:hover,.button-link:hover{border-color:#5eead4}.primary{border-color:var(--accent);background:var(--accent);color:#041311}.panel{max-width:460px;padding:28px;background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.88));border:1px solid var(--line);border-radius:8px}.wide-panel{max-width:none}.panel h1,.section-heading h1{margin:0 0 8px}.panel p{margin:0;color:var(--muted);line-height:1.5}.form{display:grid;gap:14px;margin-top:24px}.field{display:grid;gap:6px}.field label{font-weight:800;font-size:14px}.field input,.field textarea,.field select{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#0b1220;color:var(--ink);font:inherit}.field textarea{min-height:110px;resize:vertical}.notice{margin:0 0 16px;padding:12px 14px;border:1px solid rgba(251,113,133,.45);border-radius:6px;color:#fecdd3;background:rgba(251,113,133,.08)}.notice.ok{border-color:rgba(20,184,166,.45);color:#99f6e4;background:rgba(20,184,166,.08)}.helper{margin-top:16px;color:var(--muted);font-size:14px}.helper a{color:#5eead4;font-weight:800}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card,.leader-row,.stat{background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.82));border:1px solid var(--line);border-radius:8px}.card{display:grid;gap:16px;min-height:250px;padding:20px}.card:hover,.challenge:hover{border-color:#38506d}.card h3{margin:0;font-size:20px}.card p{margin:0;color:var(--muted);line-height:1.5}.badges{display:flex;flex-wrap:wrap;gap:8px}.badge{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px;font-weight:800}.badge.accent{border-color:rgba(20,184,166,.45);color:#5eead4}.progress{height:8px;overflow:hidden;background:#0b1220;border-radius:999px}.progress span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--blue))}.course-layout{display:grid;grid-template-columns:1fr 360px;gap:20px}.challenge-list{display:grid;gap:12px}.challenge{padding:18px;background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.84));border:1px solid var(--line);border-radius:8px}.challenge h3{margin:0 0 8px}.challenge p{color:var(--muted);line-height:1.5}.challenge-workspace{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}.challenge-main{display:grid;gap:14px}.workspace-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:22px;background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(15,23,42,.8));border:1px solid var(--line);border-radius:8px}.workspace-top h1{margin:14px 0 0;font-size:34px;line-height:1.15}.submit-panel{position:sticky;top:84px;padding:22px;background:#0b1220;border:1px solid var(--line);border-radius:8px}.submit-panel h2{margin:0 0 8px}.submit-panel p{color:var(--muted);line-height:1.5}.attempts{display:grid;gap:8px;margin-top:18px}.attempts h3{margin:0}.attempt{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid rgba(251,113,133,.32);border-radius:6px;color:#fecdd3;background:rgba(251,113,133,.06);font-size:13px}.attempt.ok{border-color:rgba(20,184,166,.36);color:#99f6e4;background:rgba(20,184,166,.06)}.attempt span{color:var(--muted)}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:22px 0}.stat{padding:18px}.stat strong{display:block;font-size:30px}.stat span,.leader-row span{color:var(--muted)}.leader-list{display:grid;gap:10px}.leader-row{display:grid;grid-template-columns:64px 1fr 140px;gap:16px;align-items:center;padding:14px 18px}.table{width:100%;border-collapse:collapse;margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}.table th,.table td{padding:12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.table th{color:#cbd5e1;font-size:13px}.table td{color:var(--muted);font-size:14px}@media(max-width:860px){.app-header{align-items:flex-start;flex-direction:column;gap:10px;padding:16px}.nav{width:100%;overflow-x:auto}.hero,.grid,.course-layout,.stats,.admin-grid,.challenge-workspace{grid-template-columns:1fr}.hero{min-height:auto}.hero h1{font-size:36px}.visual{min-height:220px}.leader-row{grid-template-columns:42px 1fr}.workspace-top{display:grid}.submit-panel{position:static}}`;
 }
+
+const baseCss = css;
+css = function enhancedCss() {
+  return `${baseCss()}
+body{background:linear-gradient(180deg,#060914 0%,#08101b 46%,#0a111d 100%);letter-spacing:0}
+.app-header{box-shadow:0 12px 40px rgba(0,0,0,.28)}
+.brand{letter-spacing:.2px}
+.hero{width:min(1180px,calc(100% - 32px));grid-template-columns:minmax(0,.9fr) minmax(440px,1.1fr);gap:30px;min-height:660px}
+.hero h1{font-size:clamp(40px,5vw,72px);max-width:860px}
+.hero p{max-width:720px;color:#b6c6d9}
+.visual{position:relative;min-height:500px;border-color:rgba(94,234,212,.32);background:linear-gradient(90deg,rgba(6,9,20,.18),rgba(6,9,20,.36)),url('/cyberedukz-hero.png') center/cover;border-radius:8px;box-shadow:0 30px 90px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.03) inset}
+.visual:after{content:"";position:absolute;inset:auto 18px 18px 18px;height:76px;border:1px solid rgba(94,234,212,.22);border-radius:8px;background:linear-gradient(90deg,rgba(8,16,27,.82),rgba(8,16,27,.42));backdrop-filter:blur(12px)}
+.card,.challenge,.leader-row,.stat,.panel,.submit-panel,.workspace-top{box-shadow:0 18px 50px rgba(0,0,0,.18)}
+.card:hover,.challenge:hover{transform:translateY(-2px);transition:transform .18s ease,border-color .18s ease}
+.primary{box-shadow:0 12px 30px rgba(20,184,166,.18)}
+.section-heading{max-width:760px;margin-bottom:22px}
+@media(max-width:980px){.hero{grid-template-columns:1fr;min-height:auto}.visual{min-height:340px;order:-1}.hero h1{font-size:40px}}
+@media(max-width:560px){.hero{width:min(100% - 24px,1180px);padding-top:24px}.visual{min-height:260px}.visual:after{display:none}.hero h1{font-size:34px}.actions .button-link{width:100%}.stats{grid-template-columns:1fr}}`;
+};
 
 function home(req, res) {
   const user = getCurrentUser(req);
@@ -1570,6 +1639,10 @@ async function router(req, res) {
   if (url.pathname === "/cyber-grid.svg") {
     res.writeHead(200, { "Content-Type": "image/svg+xml; charset=utf-8" });
     return res.end(fs.readFileSync(path.join(__dirname, "public", "cyber-grid.svg")));
+  }
+  if (url.pathname === "/cyberedukz-hero.png") {
+    res.writeHead(200, { "Content-Type": "image/png" });
+    return res.end(fs.readFileSync(path.join(__dirname, "public", "cyberedukz-hero.png")));
   }
   if (req.method === "GET" && url.pathname === "/") return home(req, res);
   if (req.method === "GET" && url.pathname === "/register") return authPage(req, res, "register");

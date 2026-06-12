@@ -44,6 +44,9 @@ Cyber EDU/
   prisma/
     schema.prisma         # Data model for MVP
   deliverables/           # Generated technical spec and Jira CSV
+  public/                 # Visual assets, including generated CyberEdu KZ hero image
+  scripts/                # Local run, reset, QA, smoke, and lab helper scripts
+  server.js               # Current dependency-light Node/SQLite MVP
   tools/                  # Local artifact generation scripts
 ```
 
@@ -105,6 +108,8 @@ Demo flags:
 - `CYB{report_the_finding}`
 - `CYB{metadata_author}`
 - `CYB{timeline_ordered}`
+- `CYB{secret_asset_mapped}`
+- `CYB{clean_logs_no_secrets}`
 
 Admin account:
 

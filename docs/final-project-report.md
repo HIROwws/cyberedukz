@@ -37,7 +37,8 @@ The MVP demonstrates the core learning loop:
 - Admin course creation and editing.
 - Admin lesson creation and editing.
 - Admin challenge creation and editing.
-- Demo content: 5 courses, 10 lessons, 10 challenges.
+- Demo content: 6 courses, 12 lessons, 12 challenges.
+- Generated CyberEdu KZ hero image for the landing page.
 - Smoke-test script.
 - Demo reset script.
 - Technical specification and Jira backlog files.
@@ -89,7 +90,7 @@ Admin12345
 - Docker Desktop is installed, but WSL/VirtualMachinePlatform must be enabled from an elevated PowerShell session before real containers can run.
 - Production version can move to PostgreSQL and Prisma.
 - Real isolated VM/lab execution requires Docker Desktop or WSL2. The MVP now includes lab manifests and a safe Dockerfile template, but this machine does not currently have the runtime installed.
-- Visual design can be polished further after user-specific corrections.
+- Visual design has a stronger hero image and can still be polished further after user-specific corrections.
 
 ## Recommended Next Steps
 
