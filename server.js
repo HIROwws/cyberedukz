@@ -820,6 +820,16 @@ body{background:linear-gradient(180deg,#060914 0%,#08101b 46%,#0a111d 100%);lett
 .card:hover,.challenge:hover{transform:translateY(-2px);transition:transform .18s ease,border-color .18s ease}
 .primary{box-shadow:0 12px 30px rgba(20,184,166,.18)}
 .section-heading{max-width:760px;margin-bottom:22px}
+.lab-panel{display:grid;gap:16px}
+.lab-terminal,.artifact{overflow:auto;border:1px solid rgba(94,234,212,.24);border-radius:8px;background:#050914;color:#d7fbe8;font:14px/1.55 Consolas,'Courier New',monospace}
+.lab-terminal{padding:16px}
+.artifact{padding:0}
+.artifact table{width:100%;border-collapse:collapse;min-width:620px}
+.artifact th,.artifact td{padding:11px 12px;border-bottom:1px solid rgba(148,163,184,.16);text-align:left;vertical-align:top}
+.artifact th{color:#99f6e4;background:rgba(20,184,166,.08)}
+.artifact td{color:#dbeafe}
+.lab-note{padding:14px 16px;border:1px solid rgba(96,165,250,.24);border-radius:8px;background:rgba(96,165,250,.07);color:#cfe3ff;line-height:1.55}
+.cmd{color:#5eead4}.output{color:#cbd5e1}.flag-line{color:#fbbf24;font-weight:800}.risk{color:#fecdd3}
 @media(max-width:980px){.hero{grid-template-columns:1fr;min-height:auto}.visual{min-height:340px;order:-1}.hero h1{font-size:40px}}
 @media(max-width:560px){.hero{width:min(100% - 24px,1180px);padding-top:24px}.visual{min-height:260px}.visual:after{display:none}.hero h1{font-size:34px}.actions .button-link{width:100%}.stats{grid-template-columns:1fr}}`;
 };
@@ -1086,6 +1096,197 @@ function lessonPage(req, res, id) {
   );
 }
 
+function practicePanel(challenge) {
+  const practices = {
+    "linux-hidden-file": {
+      title: "Практическая среда: домашняя директория Linux",
+      note: "Цель: найти скрытый файл и прочитать его содержимое. В Linux файлы, начинающиеся с точки, не видны в обычном `ls`.",
+      terminal: [
+        ["student@cyberedukz:~$", "pwd"],
+        ["", "/home/student"],
+        ["student@cyberedukz:~$", "ls"],
+        ["", "notes.txt  report.txt"],
+        ["student@cyberedukz:~$", "ls -la"],
+        ["", "drwxr-xr-x  2 student student 4096 Jun 12 ."],
+        ["", "drwxr-xr-x 12 root    root    4096 Jun 12 .."],
+        ["", "-rw-r--r--  1 student student   23 Jun 12 .flag"],
+        ["", "-rw-r--r--  1 student student  118 Jun 12 notes.txt"],
+        ["", "-rw-r--r--  1 student student  221 Jun 12 report.txt"],
+        ["student@cyberedukz:~$", "cat .flag"],
+        ["flag", "CYB{hidden_file_found}"],
+      ],
+    },
+    "linux-open-port": {
+      title: "Практическая среда: результат сканирования",
+      note: "Цель: определить, на каком TCP-порту отвечает HTTP-сервис. В отчётах сканирования порт 80/tcp обычно означает обычный web/HTTP.",
+      terminal: [
+        ["student@cyberedukz:~$", "cat scan-result.txt"],
+        ["", "Nmap scan report for training-box.local (10.10.10.15)"],
+        ["", "PORT     STATE  SERVICE"],
+        ["", "22/tcp   closed ssh"],
+        ["", "80/tcp   open   http"],
+        ["", "443/tcp  closed https"],
+        ["student@cyberedukz:~$", "cat conclusion.txt"],
+        ["flag", "CYB{port_80_http}"],
+      ],
+    },
+    "web-basic-sqli": {
+      title: "Практическая среда: уязвимая форма входа",
+      note: "Цель: понять принцип SQL Injection. В безопасной учебной форме строка ввода попадает в SQL без параметров, поэтому условие `OR '1'='1'` меняет логику проверки.",
+      terminal: [
+        ["request", "POST /demo-login"],
+        ["", "username=admin' OR '1'='1"],
+        ["", "password=anything"],
+        ["server", "SELECT * FROM users WHERE username='admin' OR '1'='1' AND password='anything'"],
+        ["server", "Login bypass detected in training mode."],
+        ["flag", "CYB{sqli_basics}"],
+      ],
+    },
+    "web-reflected-xss": {
+      title: "Практическая среда: отражённый поиск",
+      note: "Цель: увидеть, почему пользовательский ввод нельзя возвращать как HTML. Без экранирования браузер может интерпретировать текст как скрипт.",
+      terminal: [
+        ["browser", "GET /search?q=<script>alert(1)</script>"],
+        ["response", "<h1>Search results for <script>alert(1)</script></h1>"],
+        ["analysis", "Ввод отразился в HTML без escapeHtml(). Это reflected XSS."],
+        ["flag", "CYB{reflected_xss}"],
+      ],
+    },
+    "blue-team-ip": {
+      title: "Практическая среда: auth.log",
+      note: "Цель: найти источник множества неудачных входов и классифицировать событие как brute force.",
+      table: {
+        headers: ["time", "source_ip", "user", "result"],
+        rows: [
+          ["09:12:01", "172.16.4.20", "admin", "failed password"],
+          ["09:12:08", "172.16.4.20", "root", "failed password"],
+          ["09:12:14", "172.16.4.20", "test", "failed password"],
+          ["09:12:19", "172.16.4.20", "backup", "failed password"],
+          ["09:15:41", "10.0.2.18", "nazar", "accepted password"],
+        ],
+      },
+      terminal: [["analyst", "Повторяющиеся failed password с 172.16.4.20 = brute force alert."], ["flag", "CYB{brute_force_alert}"]],
+    },
+    "blue-timeline": {
+      title: "Практическая среда: таймлайн инцидента",
+      note: "Цель: собрать события в правильном порядке. Сначала разведка, затем попытки входа, затем успешный вход и изменение файла.",
+      table: {
+        headers: ["time", "event"],
+        rows: [
+          ["10:01", "Port scan detected from 172.16.4.20"],
+          ["10:04", "Multiple failed SSH logins"],
+          ["10:07", "Successful SSH login"],
+          ["10:12", "/var/www/html/index.php modified"],
+        ],
+      },
+      terminal: [["analyst", "Порядок событий восстановлен."], ["flag", "CYB{incident_timeline}"]],
+    },
+    "red-scope-check": {
+      title: "Практическая среда: scope перед тестом",
+      note: "Цель: перед любой разведкой проверить, что цель входит в разрешённый scope. Это важнее, чем сразу запускать инструменты.",
+      table: {
+        headers: ["asset", "status", "action"],
+        rows: [
+          ["training.cyberedukz.local", "in scope", "allowed"],
+          ["prod-bank.example", "out of scope", "do not touch"],
+          ["10.10.10.15", "in scope", "allowed lab target"],
+        ],
+      },
+      terminal: [["operator", "Работаем только с разрешённой учебной целью."], ["flag", "CYB{scope_checked}"]],
+    },
+    "red-report-finding": {
+      title: "Практическая среда: оформление находки",
+      note: "Цель: не просто найти проблему, а описать риск и рекомендацию для защитников.",
+      table: {
+        headers: ["field", "value"],
+        rows: [
+          ["Finding", "Weak password in training account"],
+          ["Risk", "Account takeover in lab scenario"],
+          ["Evidence", "Password found in allowed training artifact"],
+          ["Recommendation", "Use unique strong passwords and enforce MFA"],
+        ],
+      },
+      terminal: [["report", "Находка оформлена с риском, доказательством и рекомендацией."], ["flag", "CYB{report_the_finding}"]],
+    },
+    "forensics-file-owner": {
+      title: "Практическая среда: метаданные файла",
+      note: "Цель: прочитать свойства учебного артефакта и найти поле author.",
+      table: {
+        headers: ["metadata", "value"],
+        rows: [
+          ["filename", "incident-notes.docx"],
+          ["created", "2026-06-12 09:40"],
+          ["modified", "2026-06-12 10:05"],
+          ["author", "metadata_author"],
+        ],
+      },
+      terminal: [["forensics", "Поле author может быть полезным цифровым следом."], ["flag", "CYB{metadata_author}"]],
+    },
+    "forensics-event-order": {
+      title: "Практическая среда: порядок артефактов",
+      note: "Цель: расположить артефакты по времени и получить корректную историю событий.",
+      table: {
+        headers: ["artifact", "timestamp", "meaning"],
+        rows: [
+          ["A", "08:10", "file downloaded"],
+          ["B", "08:13", "script executed"],
+          ["C", "08:21", "new file created"],
+        ],
+      },
+      terminal: [["timeline", "A -> B -> C"], ["flag", "CYB{timeline_ordered}"]],
+    },
+    "appsec-asset-map": {
+      title: "Практическая среда: карта активов",
+      note: "Цель: отличить публичные данные от секретов. В threat modeling сначала выделяют то, что нужно защищать.",
+      table: {
+        headers: ["item", "sensitivity"],
+        rows: [
+          ["course title", "public"],
+          ["button color", "public"],
+          ["user password hash", "secret"],
+          ["submitted flag hash", "secret"],
+        ],
+      },
+      terminal: [["appsec", "Секретные активы отмечены на карте угроз."], ["flag", "CYB{secret_asset_mapped}"]],
+    },
+    "appsec-log-hygiene": {
+      title: "Практическая среда: проверка логов",
+      note: "Цель: понять, какие данные нельзя писать в логи. Email может быть персональными данными, session token и flag - секреты.",
+      terminal: [
+        ["log", "INFO user=nazar@example.local action=submit_flag"],
+        ["log", "WARN session_token=eyJhbGciOi... leaked into debug log"],
+        ["log", "WARN submitted_flag=CYB{example} should not be stored raw"],
+        ["fix", "Store only hashes, mask tokens, minimize personal data."],
+        ["flag", "CYB{clean_logs_no_secrets}"],
+      ],
+    },
+  };
+  const practice = practices[challenge.id];
+  if (!practice) {
+    return `<div class="challenge lab-panel"><h3>Практический материал</h3><p class="muted">Для этого задания практический артефакт ещё не добавлен.</p></div>`;
+  }
+  const terminal = practice.terminal
+    ? `<pre class="lab-terminal">${practice.terminal
+        .map(([label, value]) => {
+          const className = label === "flag" ? "flag-line" : label ? "cmd" : "output";
+          const prefix = label && label !== "flag" ? `${escapeHtml(label)} ` : "";
+          return `<span class="${className}">${prefix}${escapeHtml(value)}</span>`;
+        })
+        .join("\n")}</pre>`
+    : "";
+  const table = practice.table
+    ? `<div class="artifact"><table><thead><tr>${practice.table.headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${practice.table.rows
+        .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`)
+        .join("")}</tbody></table></div>`
+    : "";
+  return `<div class="challenge lab-panel">
+    <h3>${escapeHtml(practice.title)}</h3>
+    <div class="lab-note">${escapeHtml(practice.note)}</div>
+    ${table}
+    ${terminal}
+  </div>`;
+}
+
 function challengePage(req, res, id, message = "") {
   const user = getCurrentUser(req);
   if (!user) return redirect(res, "/login");
@@ -1125,6 +1326,7 @@ function challengePage(req, res, id, message = "") {
       <h3>Сценарий</h3>
       <p>${escapeHtml(challenge.description)}</p>
     </div>
+    ${practicePanel(challenge)}
     <div class="challenge">
       <h3>Подсказка</h3>
       <p>${escapeHtml(challenge.hint)}</p>
