@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CyberEdu KZ Preview</title>
+    <style>
+      :root {
+        --bg: #070b14;
+        --surface: #0f172a;
+        --ink: #e5edf7;
+        --muted: #94a3b8;
+        --line: #253247;
+        --accent: #14b8a6;
+        --blue: #60a5fa;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        min-height: 64px;
+        padding: 0 32px;
+        background: rgba(7, 11, 20, 0.92);
+        border-bottom: 1px solid var(--line);
+        backdrop-filter: blur(16px);
+      }
+
+      .brand {
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      nav {
+        display: flex;
+        gap: 20px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      main {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+        gap: 40px;
+        min-height: 620px;
+        align-items: center;
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: 52px;
+        line-height: 1.05;
+      }
+
+      .hero p {
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.6;
+      }
+
+      .visual {
+        min-height: 360px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background:
+          linear-gradient(90deg, rgba(7, 11, 20, 0.2), rgba(7, 11, 20, 0.4)),
+          url("../public/cyber-grid.svg") center / cover;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        font-weight: 700;
+      }
+
+      .button.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #041311;
+      }
+
+      section {
+        padding: 48px 0;
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-size: 34px;
+      }
+
+      .section-copy {
+        max-width: 700px;
+        margin: 0 0 24px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card,
+      .leader {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .card {
+        display: grid;
+        gap: 16px;
+        min-height: 240px;
+        padding: 20px;
+      }
+
+      .card h3 {
+        margin: 0;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .badge.accent {
+        border-color: rgba(20, 184, 166, 0.45);
+        color: #5eead4;
+      }
+
+      .progress {
+        height: 8px;
+        overflow: hidden;
+        background: #0b1220;
+        border-radius: 999px;
+      }
+
+      .progress span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), var(--blue));
+      }
+
+      .leader-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .leader {
+        display: grid;
+        grid-template-columns: 64px 1fr 120px;
+        gap: 16px;
+        align-items: center;
+        padding: 14px 18px;
+      }
+
+      .leader span {
+        color: var(--muted);
+      }
+
+      @media (max-width: 860px) {
+        header {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 10px;
+          padding: 16px;
+        }
+
+        nav {
+          width: 100%;
+          overflow-x: auto;
+        }
+
+        .hero,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .hero h1 {
+          font-size: 36px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="#">CyberEdu KZ</a>
+      <nav>
+        <a href="#courses">Курсы</a>
+        <a href="#leaderboard">Рейтинг</a>
+        <a href="#auth">Войти</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <h1>Практическое обучение кибербезопасности для Казахстана и СНГ</h1>
+          <p>
+            Курсы, задания с флагами, прогресс и рейтинг в одной учебной платформе
+            для начинающих SOC-аналитиков, pentester'ов и студентов.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="#auth">Начать обучение</a>
+            <a class="button" href="#courses">Смотреть курсы</a>
+          </div>
+        </div>
+        <div class="visual" aria-label="CyberEdu KZ visual preview"></div>
+      </section>
+
+      <section id="courses">
+        <h2>Курсы MVP</h2>
+        <p class="section-copy">
+          Первый каталог фокусируется на базовых направлениях: Linux и сети, web
+          security и blue team. Этого достаточно, чтобы показать полный учебный путь.
+        </p>
+        <div class="grid">
+          <article class="card">
+            <div class="badges">
+              <span class="badge accent">Основы</span>
+              <span class="badge">Beginner</span>
+            </div>
+            <h3>Linux & Networks Basics</h3>
+            <p>Команды Linux, файловая система, TCP/IP, DNS и первые задания с флагами.</p>
+            <div class="progress"><span style="width: 35%"></span></div>
+            <span class="badge">35% завершено</span>
+          </article>
+
+          <article class="card">
+            <div class="badges">
+              <span class="badge accent">Web</span>
+              <span class="badge">Easy</span>
+            </div>
+            <h3>Web Security Starter</h3>
+            <p>SQL Injection, XSS, авторизация и безопасные мини-лабораторные задания.</p>
+            <div class="progress"><span style="width: 12%"></span></div>
+            <span class="badge">12% завершено</span>
+          </article>
+
+          <article class="card">
+            <div class="badges">
+              <span class="badge accent">SOC</span>
+              <span class="badge">Beginner</span>
+            </div>
+            <h3>Blue Team Fundamentals</h3>
+            <p>Логи, инциденты, подозрительные события и базовое мышление SOC-аналитика.</p>
+            <div class="progress"><span style="width: 0%"></span></div>
+            <span class="badge">0% завершено</span>
+          </article>
+        </div>
+      </section>
+
+      <section id="leaderboard">
+        <h2>Рейтинг</h2>
+        <p class="section-copy">
+          Очки начисляются за решенные задания. Рейтинг мотивирует возвращаться к
+          платформе и проходить новые практики.
+        </p>
+        <div class="leader-list">
+          <div class="leader"><strong>#1</strong><strong>Ayan</strong><span>1240 points</span></div>
+          <div class="leader"><strong>#2</strong><strong>Dana</strong><span>980 points</span></div>
+          <div class="leader"><strong>#3</strong><strong>Nazar</strong><span>760 points</span></div>
+        </div>
+      </section>
+
+      <section id="auth">
+        <h2>Первый рабочий сценарий</h2>
+        <p class="section-copy">
+          Следующий кодовый шаг: связать форму регистрации с базой данных, хэшировать
+          пароль, создавать пользователя и открывать профиль после входа.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
+

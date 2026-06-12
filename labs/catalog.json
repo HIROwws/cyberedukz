@@ -1,0 +1,39 @@
+[
+  {
+    "id": "linux-hidden-file-lab",
+    "title": "Linux Hidden File Lab",
+    "courseSlug": "linux-networks",
+    "lessonId": "linux-files",
+    "challengeId": "linux-hidden-file",
+    "runtime": "docker",
+    "status": "planned",
+    "isolation": {
+      "network": "none",
+      "readonlyRootfs": true,
+      "capDrop": ["ALL"],
+      "memory": "128m",
+      "cpu": "0.5"
+    },
+    "image": "cyberedukz/linux-hidden-file-lab",
+    "goal": "Find a hidden file in a controlled Linux container."
+  },
+  {
+    "id": "forensics-metadata-lab",
+    "title": "Forensics Metadata Lab",
+    "courseSlug": "digital-forensics",
+    "lessonId": "forensics-metadata",
+    "challengeId": "forensics-file-owner",
+    "runtime": "docker",
+    "status": "planned",
+    "isolation": {
+      "network": "none",
+      "readonlyRootfs": true,
+      "capDrop": ["ALL"],
+      "memory": "128m",
+      "cpu": "0.5"
+    },
+    "image": "cyberedukz/forensics-metadata-lab",
+    "goal": "Inspect a safe local artifact and identify metadata clues."
+  }
+]
+

@@ -1,0 +1,26 @@
+﻿Summary,Issue Type,Priority,Description
+CyberEdu KZ MVP,Epic,Highest,Главный epic проекта: образовательная платформа по кибербезопасности для СНГ/Казахстана.
+Auth and User Profile,Epic,High,"Регистрация, вход, роли и профиль пользователя."
+Course Learning Experience,Epic,High,"Каталог курсов, уроки, задания, прогресс."
+Gamification and Progress,Epic,Medium,"Очки, рейтинг, статусы прохождения."
+Admin Content Management,Epic,Medium,"CRUD для курсов, модулей и заданий."
+Localization and Demo Content,Epic,High,"Русский интерфейс, KZ/CIS контекст, учебные задания."
+Set up repository and project structure,Task,Highest,"Создать проект, настроить scripts, env example, README, базовую структуру frontend/backend."
+Create database schema,Task,Highest,"Описать User, Course, Module, Lesson, Challenge, Submission, Progress."
+"As a visitor, I can register an account",Story,Highest,Acceptance: email/password validation; password hash; duplicate email handled.
+"As a user, I can log in and log out",Story,Highest,Acceptance: valid credentials create session; logout clears session; invalid credentials show Russian error.
+"As a user, I can view my profile",Story,High,"Acceptance: profile shows name, email, points, completed challenges, active courses."
+"As a learner, I can browse courses",Story,Highest,"Acceptance: course cards show title, track, difficulty, progress; filters work."
+"As a learner, I can open a course page",Story,Highest,Acceptance: modules and lessons shown in order; locked/unlocked state is clear.
+"As a learner, I can read a lesson",Story,High,Acceptance: theory markdown renders; next challenge link visible.
+"As a learner, I can submit a flag",Story,Highest,Acceptance: correct flag awards points once; wrong flag does not award points.
+Implement server-side flag validation,Task,Highest,Compare submitted value with server-side hash; never expose valid flags in client bundle.
+"As a learner, I can see course progress",Story,High,Acceptance: progress percent changes after completed tasks.
+"As a learner, I can see leaderboard",Story,Medium,Acceptance: users sorted by points; current user visible.
+"As an admin, I can create and edit courses",Story,Medium,"Acceptance: admin-only form creates course with title, track, difficulty, description."
+"As an admin, I can create challenges",Story,Medium,"Acceptance: admin can add description, hint, points and flag; flag stored as hash."
+Seed MVP demo content,Task,Highest,Create 3 tracks and 10-15 starter tasks with safe educational content.
+Localize core interface to Russian,Task,High,"Navigation, forms, errors and empty states are in Russian."
+Add Kazakhstan/CIS context to content,Task,Medium,"Use local examples: universities, SOC roles, KZ timezone, regional terminology."
+Write README and demo script,Task,High,README explains setup; demo script describes 5-minute walkthrough.
+Test critical user journey,Task,Highest,Test registration -> course -> lesson -> flag -> progress -> leaderboard.

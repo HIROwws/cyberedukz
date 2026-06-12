@@ -1,0 +1,17 @@
+node_modules/
+.next/
+dist/
+build/
+coverage/
+.env
+.env.local
+*.log
+*.db
+*.db-journal
+prisma/dev.db
+data/db.json
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+server.out.log
+server.err.log
