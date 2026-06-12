@@ -1345,6 +1345,16 @@ function interactiveTerminal(challengeId) {
   const commands = {
     "linux-hidden-file": ["pwd", "ls", "ls -la", "cat notes.txt", "cat .flag"],
     "linux-open-port": ["cat scan-result.txt", "grep open scan-result.txt", "cat conclusion.txt"],
+    "web-basic-sqli": ["show query", "login admin wrongpass", "login \"admin' OR '1'='1\" anything"],
+    "web-reflected-xss": ["search hello", "search <script>alert(1)</script>", "explain impact"],
+    "blue-team-ip": ["show logs", "count failures by ip", "classify 172.16.4.20"],
+    "blue-timeline": ["show events", "sort by time", "build timeline"],
+    "red-scope-check": ["show scope", "check training.cyberedukz.local", "check prod-bank.example"],
+    "red-report-finding": ["show evidence", "draft finding", "validate report"],
+    "forensics-file-owner": ["show metadata", "extract author", "validate artifact"],
+    "forensics-event-order": ["show artifacts", "sort artifacts", "validate timeline"],
+    "appsec-asset-map": ["show assets", "mark secrets", "validate asset map"],
+    "appsec-log-hygiene": ["show logs", "find leaked secrets", "sanitize logs"],
   }[challengeId];
   if (!commands) return "";
   return `<div class="mini-terminal" data-terminal="${escapeHtml(challengeId)}">
@@ -1358,7 +1368,8 @@ function interactiveTerminal(challengeId) {
 }
 
 function terminalOutput(challengeId, command) {
-  const normalized = String(command || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const raw = String(command || "").trim();
+  const normalized = raw.toLowerCase().replace(/\s+/g, " ");
   const labs = {
     "linux-hidden-file": {
       help: "Доступные команды: pwd, ls, ls -la, cat notes.txt, cat report.txt, cat .flag",
@@ -1386,6 +1397,88 @@ function terminalOutput(challengeId, command) {
       ].join("\n"),
       "grep open scan-result.txt": "80/tcp   open   http",
       "cat conclusion.txt": "CYB{port_80_http}",
+    },
+    "web-basic-sqli": {
+      help: "Доступные команды: show query, login admin wrongpass, login \"admin' OR '1'='1\" anything",
+      "show query": "SELECT * FROM users WHERE username = '<input>' AND password = '<input>';",
+      "login admin wrongpass": "Access denied. Обычный пароль не подошёл.",
+      "login \"admin' or '1'='1\" anything": [
+        "Input changed the WHERE logic:",
+        "username = 'admin' OR '1'='1'",
+        "Training bypass detected.",
+        "CYB{sqli_basics}",
+      ].join("\n"),
+      "login admin' or '1'='1 anything": [
+        "Input changed the WHERE logic:",
+        "username = 'admin' OR '1'='1'",
+        "Training bypass detected.",
+        "CYB{sqli_basics}",
+      ].join("\n"),
+    },
+    "web-reflected-xss": {
+      help: "Доступные команды: search hello, search <script>alert(1)</script>, explain impact",
+      "search hello": "Response preview: <h1>Search results for hello</h1>\nSafe text is reflected as plain content.",
+      "search <script>alert(1)</script>": [
+        "Response preview:",
+        "<h1>Search results for <script>alert(1)</script></h1>",
+        "The payload is reflected as HTML/JS. This is reflected XSS.",
+        "CYB{reflected_xss}",
+      ].join("\n"),
+      "explain impact": "If user input is rendered as HTML, an attacker can run script in a victim browser. Escape output before rendering.",
+    },
+    "blue-team-ip": {
+      help: "Доступные команды: show logs, count failures by ip, classify 172.16.4.20",
+      "show logs": [
+        "09:12:01 172.16.4.20 admin failed password",
+        "09:12:08 172.16.4.20 root failed password",
+        "09:12:14 172.16.4.20 test failed password",
+        "09:12:19 172.16.4.20 backup failed password",
+        "09:15:41 10.0.2.18 nazar accepted password",
+      ].join("\n"),
+      "count failures by ip": "172.16.4.20 => 4 failed logins\n10.0.2.18 => 0 failed logins",
+      "classify 172.16.4.20": "Repeated failed passwords from one source = brute force alert.\nCYB{brute_force_alert}",
+    },
+    "blue-timeline": {
+      help: "Доступные команды: show events, sort by time, build timeline",
+      "show events": "10:12 file modified\n10:01 port scan\n10:07 successful login\n10:04 failed SSH logins",
+      "sort by time": "10:01 port scan\n10:04 failed SSH logins\n10:07 successful login\n10:12 file modified",
+      "build timeline": "Recon -> brute force attempts -> successful access -> file modification\nCYB{incident_timeline}",
+    },
+    "red-scope-check": {
+      help: "Доступные команды: show scope, check training.cyberedukz.local, check prod-bank.example",
+      "show scope": "In scope: training.cyberedukz.local, 10.10.10.15\nOut of scope: prod-bank.example",
+      "check training.cyberedukz.local": "Allowed training target. Proceed only inside the lab scope.\nCYB{scope_checked}",
+      "check prod-bank.example": "Out of scope. Stop. Do not test real or unauthorized systems.",
+    },
+    "red-report-finding": {
+      help: "Доступные команды: show evidence, draft finding, validate report",
+      "show evidence": "Evidence: weak password found in allowed training artifact. Affected account: training-user.",
+      "draft finding": "Finding: weak password\nRisk: account takeover in lab scenario\nRecommendation: unique strong passwords and MFA",
+      "validate report": "Report includes context, evidence, risk and recommendation.\nCYB{report_the_finding}",
+    },
+    "forensics-file-owner": {
+      help: "Доступные команды: show metadata, extract author, validate artifact",
+      "show metadata": "filename=incident-notes.docx\ncreated=2026-06-12 09:40\nmodified=2026-06-12 10:05\nauthor=metadata_author",
+      "extract author": "author=metadata_author",
+      "validate artifact": "Author metadata extracted and preserved as evidence.\nCYB{metadata_author}",
+    },
+    "forensics-event-order": {
+      help: "Доступные команды: show artifacts, sort artifacts, validate timeline",
+      "show artifacts": "C 08:21 new file created\nA 08:10 file downloaded\nB 08:13 script executed",
+      "sort artifacts": "A 08:10 file downloaded\nB 08:13 script executed\nC 08:21 new file created",
+      "validate timeline": "Correct order: A -> B -> C\nCYB{timeline_ordered}",
+    },
+    "appsec-asset-map": {
+      help: "Доступные команды: show assets, mark secrets, validate asset map",
+      "show assets": "course title, button color, user password hash, submitted flag hash",
+      "mark secrets": "secret: user password hash\nsecret: submitted flag hash\npublic: course title, button color",
+      "validate asset map": "Sensitive assets identified before design review.\nCYB{secret_asset_mapped}",
+    },
+    "appsec-log-hygiene": {
+      help: "Доступные команды: show logs, find leaked secrets, sanitize logs",
+      "show logs": "INFO user=nazar@example.local action=submit_flag\nWARN session_token=eyJhbGciOi...\nWARN submitted_flag=CYB{example}",
+      "find leaked secrets": "Leaked: session_token, submitted_flag. Email may be personal data and should be minimized.",
+      "sanitize logs": "Use hashes for flags, mask tokens, minimize personal data.\nCYB{clean_logs_no_secrets}",
     },
   };
   const lab = labs[challengeId];
