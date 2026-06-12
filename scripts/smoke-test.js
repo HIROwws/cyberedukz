@@ -20,6 +20,22 @@ function assert(condition, message) {
   }
 }
 
+let smokeEmail = "";
+
+function cleanupSmokeUser() {
+  if (!smokeEmail || !fs.existsSync(SQLITE_PATH)) return;
+  const db = new DatabaseSync(SQLITE_PATH);
+  try {
+    const user = db.prepare("SELECT id FROM users WHERE email = ?").get(smokeEmail);
+    if (user) {
+      db.prepare("DELETE FROM submissions WHERE userId = ?").run(user.id);
+      db.prepare("DELETE FROM users WHERE id = ?").run(user.id);
+    }
+  } finally {
+    db.close();
+  }
+}
+
 async function main() {
   let result = await request("/health");
   assert(result.response.status === 200, `health expected 200, got ${result.response.status}`);
@@ -27,7 +43,7 @@ async function main() {
   assert(health.ok === true, "health response is not ok");
   assert(health.courses >= 5 && health.lessons >= 10 && health.challenges >= 10, "health content counts are too low");
 
-  const routes = ["/", "/roadmap", "/labs", "/courses", "/lesson/linux-networking", "/leaderboard"];
+  const routes = ["/", "/courses", "/lesson/linux-networking", "/leaderboard"];
   for (const route of routes) {
     const { response } = await request(route);
     assert(response.status === 200, `${route} expected 200, got ${response.status}`);
@@ -37,6 +53,7 @@ async function main() {
   assert(result.response.status === 302, "challenge page must redirect anonymous users");
 
   const email = `smoke-${Date.now()}@cyberedukz.local`;
+  smokeEmail = email;
   result = await request("/register", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -92,18 +109,29 @@ async function main() {
 
   assert(fs.existsSync(SQLITE_PATH), "SQLite database file does not exist");
   const db = new DatabaseSync(SQLITE_PATH);
-  const columns = db.prepare("PRAGMA table_info(submissions)").all().map((column) => column.name);
-  assert(!columns.includes("submittedValue"), "raw submitted flags column must not exist");
-  assert(columns.includes("submittedHash"), "submittedHash column is missing");
-  assert(db.prepare("SELECT COUNT(*) AS count FROM courses").get().count >= 5, "expected at least 5 courses");
-  assert(db.prepare("SELECT COUNT(*) AS count FROM lessons").get().count >= 10, "expected at least 10 lessons");
-  assert(db.prepare("SELECT COUNT(*) AS count FROM challenges").get().count >= 10, "expected at least 10 challenges");
-  db.close();
+  try {
+    const columns = db.prepare("PRAGMA table_info(submissions)").all().map((column) => column.name);
+    assert(!columns.includes("submittedValue"), "raw submitted flags column must not exist");
+    assert(columns.includes("submittedHash"), "submittedHash column is missing");
+    assert(db.prepare("SELECT COUNT(*) AS count FROM courses").get().count >= 5, "expected at least 5 courses");
+    assert(db.prepare("SELECT COUNT(*) AS count FROM lessons").get().count >= 10, "expected at least 10 lessons");
+    assert(db.prepare("SELECT COUNT(*) AS count FROM challenges").get().count >= 10, "expected at least 10 challenges");
+  } finally {
+    if (smokeEmail) {
+      const user = db.prepare("SELECT id FROM users WHERE email = ?").get(smokeEmail);
+      if (user) {
+        db.prepare("DELETE FROM submissions WHERE userId = ?").run(user.id);
+        db.prepare("DELETE FROM users WHERE id = ?").run(user.id);
+      }
+    }
+    db.close();
+  }
 
   console.log("Smoke test passed");
 }
 
 main().catch((error) => {
+  cleanupSmokeUser();
   console.error(error.message);
   process.exit(1);
 });

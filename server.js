@@ -788,9 +788,7 @@ function layout({ title, user, body }) {
       <a class="brand" href="/">CyberEdu KZ</a>
       <nav class="nav">
         <a href="/courses">Курсы</a>
-        <a href="/labs">Лабы</a>
         <a href="/leaderboard">Рейтинг</a>
-        <a href="/roadmap">План</a>
         ${
           user
             ? `${isAdmin(user) ? `<a href="/admin">Админ</a>` : ""}<a href="/profile">Профиль</a><form method="post" action="/logout"><button>Выйти</button></form>`
@@ -829,7 +827,6 @@ body{background:linear-gradient(180deg,#060914 0%,#08101b 46%,#0a111d 100%);lett
 function home(req, res) {
   const user = getCurrentUser(req);
   const db = readDb();
-  const progress = totalProgress(db, user);
   send(
     res,
     layout({
@@ -851,14 +848,6 @@ function home(req, res) {
     </div>
   </div>
   <div class="visual" aria-label="CyberEdu KZ visual"></div>
-</section>
-<section class="page">
-  <div class="section-heading"><h1>Учебный цикл MVP</h1><p>Платформа уже показывает полный путь пользователя: от регистрации до результата в профиле и рейтинге.</p></div>
-  <div class="grid">
-    <article class="card"><div class="badge accent">1</div><h3>Изучить урок</h3><p>Короткая теория объясняет принцип без перегруза и готовит к практическому заданию.</p></article>
-    <article class="card"><div class="badge accent">2</div><h3>Отправить флаг</h3><p>Флаг проверяется на сервере, а попытки фиксируются без хранения ответа в открытом виде.</p></article>
-    <article class="card"><div class="badge accent">3</div><h3>Увидеть прогресс</h3><p>${user ? `Ваш общий прогресс: ${progress.done}/${progress.total} заданий, ${progress.percent}%.` : "После входа прогресс появится в профиле и каталоге курсов."}</p></article>
-  </div>
 </section>`,
     })
   );
