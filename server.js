@@ -872,6 +872,8 @@ const baseCss = css;
 css = function enhancedCss() {
   return `${baseCss()}
 body{background:linear-gradient(180deg,#060914 0%,#08101b 46%,#0a111d 100%);letter-spacing:0}
+body{min-height:100vh;background:radial-gradient(circle at 18% 12%,rgba(20,184,166,.16),transparent 30rem),radial-gradient(circle at 78% 28%,rgba(96,165,250,.12),transparent 34rem),linear-gradient(135deg,#050812 0%,#08101b 48%,#060914 100%);background-attachment:fixed}
+main{min-height:calc(100vh - 64px)}
 .app-header{box-shadow:0 12px 40px rgba(0,0,0,.28)}
 .brand{letter-spacing:.2px}
 .hero{width:min(1180px,calc(100% - 32px));grid-template-columns:minmax(0,560px) minmax(420px,1fr);gap:46px;min-height:640px;overflow:hidden}
@@ -880,6 +882,8 @@ body{background:linear-gradient(180deg,#060914 0%,#08101b 46%,#0a111d 100%);lett
 .visual{position:relative;min-height:430px;border-color:rgba(94,234,212,.32);background:linear-gradient(90deg,rgba(6,9,20,.18),rgba(6,9,20,.36)),url('/cyberedukz-hero.png') center/cover;border-radius:8px;box-shadow:0 30px 90px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.03) inset}
 .visual:after{content:"";position:absolute;inset:auto 18px 18px 18px;height:76px;border:1px solid rgba(94,234,212,.22);border-radius:8px;background:linear-gradient(90deg,rgba(8,16,27,.82),rgba(8,16,27,.42));backdrop-filter:blur(12px)}
 .card,.challenge,.leader-row,.stat,.panel,.submit-panel,.workspace-top{box-shadow:0 18px 50px rgba(0,0,0,.18)}
+.auth-page{display:grid;place-items:center;min-height:calc(100vh - 64px);width:min(100%,calc(100% - 32px));padding:36px 0}
+.auth-panel{width:min(460px,100%);max-width:none}
 .card:hover,.challenge:hover{transform:translateY(-2px);transition:transform .18s ease,border-color .18s ease}
 .primary{box-shadow:0 12px 30px rgba(20,184,166,.18)}
 .section-heading{max-width:760px;margin-bottom:22px}
@@ -918,7 +922,7 @@ body{background:linear-gradient(180deg,#060914 0%,#08101b 46%,#0a111d 100%);lett
 .submit-panel{box-shadow:0 24px 70px rgba(0,0,0,.28)}
 @media(max-width:980px){.hero{grid-template-columns:1fr;min-height:auto}.visual{min-height:340px;order:-1}.hero h1{font-size:40px}}
 @media(max-width:860px){.profile-hero{grid-template-columns:1fr}.profile-hero h1{font-size:32px}}
-@media(max-width:560px){.hero{width:min(100% - 24px,1180px);padding-top:24px}.visual{min-height:260px}.visual:after{display:none}.hero h1{font-size:34px}.actions .button-link{width:100%}.stats{grid-template-columns:1fr}.terminal-input{grid-template-columns:1fr}.card-top{align-items:flex-start;flex-direction:column}}`;
+@media(max-width:560px){main{min-height:calc(100vh - 86px)}.auth-page{min-height:calc(100vh - 86px);width:min(100%,calc(100% - 24px));padding:24px 0}.auth-panel{padding:24px}.hero{width:min(100% - 24px,1180px);padding-top:24px}.visual{min-height:260px}.visual:after{display:none}.hero h1{font-size:34px}.actions .button-link{width:100%}.stats{grid-template-columns:1fr}.terminal-input{grid-template-columns:1fr}.card-top{align-items:flex-start;flex-direction:column}}`;
 };
 
 function home(req, res) {
@@ -958,7 +962,7 @@ function authPage(req, res, mode, error = "") {
     layout({
       title: isRegister ? "Регистрация" : "Вход",
       user,
-      body: `<section class="page"><div class="panel">
+      body: `<section class="page auth-page"><div class="panel auth-panel">
   <h1>${isRegister ? "Регистрация" : "Вход"}</h1>
   <p>${isRegister ? "Создайте аккаунт студента, чтобы проходить курсы и сохранять прогресс." : "Войдите, чтобы продолжить обучение."}</p>
   ${error ? `<div class="notice">${escapeHtml(error)}</div>` : ""}
