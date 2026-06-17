@@ -882,8 +882,25 @@ body{background:linear-gradient(180deg,#060914 0%,#08101b 46%,#0a111d 100%);lett
 .command-palette{display:flex;flex-wrap:wrap;gap:8px}
 .command-palette button{min-height:32px;padding:0 10px;border:1px solid rgba(94,234,212,.28);border-radius:6px;background:rgba(20,184,166,.08);color:#99f6e4;font:13px Consolas,'Courier New',monospace;cursor:pointer}
 .terminal-line{display:block}.terminal-line.prompt{color:#5eead4}.terminal-line.error{color:#fecdd3}
+.app-header{border-bottom-color:rgba(94,234,212,.18)}
+.nav a,.nav button{padding:8px 0}
+.eyebrow{color:#5eead4;font-size:12px;font-weight:800;text-transform:uppercase}
+.course-icon{display:inline-grid;place-items:center;width:42px;height:42px;border:1px solid rgba(94,234,212,.28);border-radius:8px;background:rgba(20,184,166,.08);color:#99f6e4;font-weight:900}
+.card-top{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.profile-hero{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:18px;align-items:center;padding:26px;border:1px solid rgba(94,234,212,.22);border-radius:8px;background:linear-gradient(135deg,rgba(20,184,166,.12),rgba(96,165,250,.07)),#0b1220}
+.profile-hero h1{margin:0;font-size:38px}
+.leader-row.top{border-color:rgba(251,191,36,.42);background:linear-gradient(90deg,rgba(251,191,36,.12),rgba(15,23,42,.92))}
+.leader-row.you{outline:1px solid rgba(94,234,212,.55)}
+.rank-medal{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:8px;background:rgba(148,163,184,.08);color:#e5edf7}
+.rank-medal.gold{background:rgba(251,191,36,.16);color:#fde68a}
+.rank-medal.silver{background:rgba(203,213,225,.14);color:#e2e8f0}
+.rank-medal.bronze{background:rgba(217,119,6,.16);color:#fed7aa}
+.workspace-top{border-color:rgba(94,234,212,.22)}
+.lab-panel h3:before{content:"";display:inline-block;width:8px;height:8px;margin-right:10px;border-radius:999px;background:#5eead4;box-shadow:0 0 18px rgba(94,234,212,.7)}
+.submit-panel{box-shadow:0 24px 70px rgba(0,0,0,.28)}
 @media(max-width:980px){.hero{grid-template-columns:1fr;min-height:auto}.visual{min-height:340px;order:-1}.hero h1{font-size:40px}}
-@media(max-width:560px){.hero{width:min(100% - 24px,1180px);padding-top:24px}.visual{min-height:260px}.visual:after{display:none}.hero h1{font-size:34px}.actions .button-link{width:100%}.stats{grid-template-columns:1fr}.terminal-input{grid-template-columns:1fr}}`;
+@media(max-width:860px){.profile-hero{grid-template-columns:1fr}.profile-hero h1{font-size:32px}}
+@media(max-width:560px){.hero{width:min(100% - 24px,1180px);padding-top:24px}.visual{min-height:260px}.visual:after{display:none}.hero h1{font-size:34px}.actions .button-link{width:100%}.stats{grid-template-columns:1fr}.terminal-input{grid-template-columns:1fr}.card-top{align-items:flex-start;flex-direction:column}}`;
 };
 
 function home(req, res) {
@@ -896,9 +913,9 @@ function home(req, res) {
       user,
       body: `<section class="page hero">
   <div>
-    <div class="badges"><span class="badge accent">MVP Sprint</span><span class="badge">Kazakhstan/CIS</span><span class="badge">RU Interface</span></div>
+    <div class="badges"><span class="badge accent">Cybersecurity Academy</span><span class="badge">Kazakhstan/CIS</span><span class="badge">RU Interface</span></div>
     <h1>Практическое обучение кибербезопасности для Казахстана и СНГ</h1>
-    <p>Курсы, задания с флагами, прогресс и рейтинг в одной учебной платформе для начинающих SOC-аналитиков, pentester'ов и студентов.</p>
+    <p>Интерактивные курсы, безопасные учебные задания, прогресс и рейтинг в одной платформе для начинающих SOC-аналитиков, AppSec-специалистов и студентов.</p>
     <div class="actions">
       <a class="button-link primary" href="${user ? "/courses" : "/register"}">Начать обучение</a>
       <a class="button-link" href="/courses">Смотреть курсы</a>
@@ -1018,21 +1035,24 @@ function profile(req, res) {
       title: "Профиль",
       user,
       body: `<section class="page">
-  <div class="section-heading">
-    <h1>Профиль</h1>
-    <p>Ваш прогресс по CyberEdu KZ MVP.</p>
+  <div class="profile-hero">
+    <div>
+      <div class="eyebrow">Student dashboard</div>
+      <h1>${escapeHtml(user.name)}</h1>
+      <p class="muted">${escapeHtml(user.email)}</p>
+    </div>
+    <a class="button-link primary" href="/courses">Продолжить обучение</a>
   </div>
   <div class="stats">
-    <div class="stat"><strong>${escapeHtml(user.name)}</strong><span>${escapeHtml(user.email)}</span></div>
     <div class="stat"><strong>${user.points}</strong><span>очков</span></div>
     <div class="stat"><strong>${overall.percent}%</strong><span>${uniqueSolved.size}/${overall.total} заданий решено</span></div>
+    <div class="stat"><strong>${db.courses.length}</strong><span>доступных курсов</span></div>
   </div>
   <div class="progress"><span style="width:${overall.percent}%"></span></div>
   <div class="section-heading"><h1>Прогресс по курсам</h1><p>Процент считается по решенным практическим заданиям.</p></div>
   <div class="challenge-list">${progressRows}</div>
   <div class="section-heading"><h1>Последние решения</h1><p>Краткая история успешных флагов для демонстрации результата обучения.</p></div>
   <div class="leader-list">${recentSolved || `<div class="challenge"><p class="muted">Пока нет решенных заданий. Начните с курса Linux & Networks Basics.</p></div>`}</div>
-  <a class="button-link primary" href="/courses">Продолжить обучение</a>
 </section>`,
     })
   );
@@ -1041,12 +1061,21 @@ function profile(req, res) {
 function courses(req, res) {
   const user = getCurrentUser(req);
   const db = readDb();
+  const trackIcon = (track) =>
+    ({
+      "Основы": "LX",
+      Web: "WB",
+      SOC: "SC",
+      "Red Team": "RT",
+      Forensics: "DF",
+      AppSec: "AS",
+    }[track] || "CY");
   const cards = db.courses
     .map((course) => {
       const progress = courseProgress(db, user, course.slug);
       const lessonCount = db.lessons.filter((lesson) => lesson.courseSlug === course.slug).length;
       return `<article class="card">
-  <div class="badges"><span class="badge accent">${escapeHtml(course.track)}</span><span class="badge">${escapeHtml(difficultyLabel(course.difficulty))}</span></div>
+  <div class="card-top"><span class="course-icon">${escapeHtml(trackIcon(course.track))}</span><div class="badges"><span class="badge accent">${escapeHtml(course.track)}</span><span class="badge">${escapeHtml(difficultyLabel(course.difficulty))}</span></div></div>
   <h3>${escapeHtml(course.title)}</h3>
   <p>${escapeHtml(course.description)}</p>
   <div class="progress"><span style="width:${progress.percent}%"></span></div>
@@ -1061,7 +1090,7 @@ function courses(req, res) {
       title: "Курсы",
       user,
       body: `<section class="page">
-  <div class="section-heading"><h1>Курсы</h1><p>Стартовый каталог MVP: теория, задания, флаги и прогресс.</p></div>
+  <div class="section-heading"><div class="eyebrow">Learning tracks</div><h1>Курсы</h1><p>Выберите направление, изучите короткую теорию и закрепите навык в интерактивной практике.</p></div>
   <div class="grid">${cards}</div>
 </section>`,
     })
@@ -1537,6 +1566,7 @@ function challengePage(req, res, id, message = "") {
       <h3>Сценарий</h3>
       <p>${escapeHtml(challenge.description)}</p>
     </div>
+    <div class="section-heading"><div class="eyebrow">Interactive practice</div><h1>Рабочая область</h1><p>Выполните команды или действия в учебной среде, найдите флаг и отправьте его на проверку.</p></div>
     ${practicePanel(challenge)}
     <div class="challenge">
       <h3>Подсказка</h3>
@@ -1545,7 +1575,7 @@ function challengePage(req, res, id, message = "") {
   </div>
   <aside class="submit-panel">
     <h2>Отправка флага</h2>
-    <p>Проверка выполняется на сервере. Ответ хранится как hash, не в клиентском коде.</p>
+    <p>Найдите флаг в интерактивной практике и отправьте его здесь. Ответ проверяется безопасно на сервере.</p>
     ${solved ? `<div class="notice ok">Задание уже решено. Повторная отправка не начислит очки второй раз.</div>` : ""}
     ${message ? `<div class="notice">${escapeHtml(message)}</div>` : ""}
     <form class="form" method="post" action="/challenge/${challenge.id}/submit">
@@ -1939,16 +1969,19 @@ function leaderboard(req, res) {
   const db = readDb();
   const rows = [...db.users]
     .sort((a, b) => b.points - a.points)
-    .map(
-      (item, index) => `<div class="leader-row"><strong>#${index + 1}</strong><div><strong>${escapeHtml(item.name)}</strong><br><span>${escapeHtml(item.role)}</span></div><span>${item.points} points</span></div>`
-    )
+    .map((item, index) => {
+      const solvedCount = new Set(db.submissions.filter((submission) => submission.userId === item.id && submission.isCorrect).map((submission) => submission.challengeId)).size;
+      const medal = index === 0 ? "gold" : index === 1 ? "silver" : index === 2 ? "bronze" : "";
+      const classes = ["leader-row", index < 3 ? "top" : "", user?.id === item.id ? "you" : ""].filter(Boolean).join(" ");
+      return `<div class="${classes}"><strong class="rank-medal ${medal}">#${index + 1}</strong><div><strong>${escapeHtml(item.name)}</strong><br><span>${escapeHtml(item.role)} · ${solvedCount} заданий решено</span></div><span>${item.points} points</span></div>`;
+    })
     .join("");
   send(
     res,
     layout({
       title: "Рейтинг",
       user,
-      body: `<section class="page"><div class="section-heading"><h1>Рейтинг</h1><p>Очки начисляются за правильно решенные задания.</p></div><div class="leader-list">${rows}</div></section>`,
+      body: `<section class="page"><div class="section-heading"><div class="eyebrow">Leaderboard</div><h1>Рейтинг</h1><p>Очки начисляются за решённые практические задания. Рейтинг показывает активность студентов и прогресс по платформе.</p></div><div class="leader-list">${rows}</div></section>`,
     })
   );
 }
@@ -1967,7 +2000,7 @@ function roadmap(req, res) {
   ];
   const rows = items
     .map(
-      ([day, focus, status]) => `<div class="leader-row"><strong>${day}</strong><div><strong>${focus}</strong><br><span>MVP Sprint 1</span></div><span>${status}</span></div>`
+      ([day, focus, status]) => `<div class="leader-row"><strong>${day}</strong><div><strong>${focus}</strong><br><span>Sprint 1</span></div><span>${status}</span></div>`
     )
     .join("");
   send(
