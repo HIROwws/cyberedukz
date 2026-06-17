@@ -369,6 +369,15 @@ function ensureDb() {
           points: 0,
           createdAt: now,
         },
+        {
+          id: "demo-student",
+          email: "student@cyberedukz.local",
+          name: "Demo Student",
+          passwordHash: hashPassword("Student12345"),
+          role: "STUDENT",
+          points: 0,
+          createdAt: now,
+        },
       ],
       courses: [
         {
@@ -551,6 +560,15 @@ function seedDbObject() {
         name: "Admin",
         passwordHash: hashPassword("Admin12345"),
         role: "ADMIN",
+        points: 0,
+        createdAt: now,
+      },
+      {
+        id: "demo-student",
+        email: "student@cyberedukz.local",
+        name: "Demo Student",
+        passwordHash: hashPassword("Student12345"),
+        role: "STUDENT",
         points: 0,
         createdAt: now,
       },
@@ -856,10 +874,10 @@ css = function enhancedCss() {
 body{background:linear-gradient(180deg,#060914 0%,#08101b 46%,#0a111d 100%);letter-spacing:0}
 .app-header{box-shadow:0 12px 40px rgba(0,0,0,.28)}
 .brand{letter-spacing:.2px}
-.hero{width:min(1180px,calc(100% - 32px));grid-template-columns:minmax(0,.9fr) minmax(440px,1.1fr);gap:30px;min-height:660px}
-.hero h1{font-size:clamp(40px,5vw,72px);max-width:860px}
-.hero p{max-width:720px;color:#b6c6d9}
-.visual{position:relative;min-height:500px;border-color:rgba(94,234,212,.32);background:linear-gradient(90deg,rgba(6,9,20,.18),rgba(6,9,20,.36)),url('/cyberedukz-hero.png') center/cover;border-radius:8px;box-shadow:0 30px 90px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.03) inset}
+.hero{width:min(1180px,calc(100% - 32px));grid-template-columns:minmax(0,560px) minmax(420px,1fr);gap:46px;min-height:640px;overflow:hidden}
+.hero h1{font-size:clamp(38px,3.8vw,58px);max-width:560px;overflow-wrap:break-word}
+.hero p{max-width:560px;color:#b6c6d9}
+.visual{position:relative;min-height:430px;border-color:rgba(94,234,212,.32);background:linear-gradient(90deg,rgba(6,9,20,.18),rgba(6,9,20,.36)),url('/cyberedukz-hero.png') center/cover;border-radius:8px;box-shadow:0 30px 90px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.03) inset}
 .visual:after{content:"";position:absolute;inset:auto 18px 18px 18px;height:76px;border:1px solid rgba(94,234,212,.22);border-radius:8px;background:linear-gradient(90deg,rgba(8,16,27,.82),rgba(8,16,27,.42));backdrop-filter:blur(12px)}
 .card,.challenge,.leader-row,.stat,.panel,.submit-panel,.workspace-top{box-shadow:0 18px 50px rgba(0,0,0,.18)}
 .card:hover,.challenge:hover{transform:translateY(-2px);transition:transform .18s ease,border-color .18s ease}
@@ -914,7 +932,7 @@ function home(req, res) {
       body: `<section class="page hero">
   <div>
     <div class="badges"><span class="badge accent">Cybersecurity Academy</span><span class="badge">Kazakhstan/CIS</span><span class="badge">RU Interface</span></div>
-    <h1>Практическое обучение кибербезопасности для Казахстана и СНГ</h1>
+    <h1>Cybersecurity Academy для Казахстана и СНГ</h1>
     <p>Интерактивные курсы, безопасные учебные задания, прогресс и рейтинг в одной платформе для начинающих SOC-аналитиков, AppSec-специалистов и студентов.</p>
     <div class="actions">
       <a class="button-link primary" href="${user ? "/courses" : "/register"}">Начать обучение</a>

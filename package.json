@@ -10,7 +10,7 @@
     "qa": "powershell -ExecutionPolicy Bypass -File ./scripts/qa-local.ps1",
     "reset:demo": "node --no-warnings scripts/reset-demo-data.js",
     "build": "next build",
-    "start": "next start",
+    "start": "node --no-warnings server.js",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
