@@ -414,6 +414,14 @@ function ensureDb() {
 
 function migrateDb(db) {
   let changed = false;
+  if (!Array.isArray(db.enrollments)) {
+    db.enrollments = [];
+    changed = true;
+  }
+  if (!Array.isArray(db.lessonProgress)) {
+    db.lessonProgress = [];
+    changed = true;
+  }
   if (!Array.isArray(db.courses)) {
     db.courses = [];
     changed = true;
@@ -543,6 +551,19 @@ function ensureSchema() {
       isCorrect INTEGER NOT NULL,
       createdAt TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS enrollments (
+      userId TEXT NOT NULL,
+      courseSlug TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      PRIMARY KEY (userId, courseSlug)
+    );
+    CREATE TABLE IF NOT EXISTS lesson_progress (
+      userId TEXT NOT NULL,
+      lessonId TEXT NOT NULL,
+      theoryCompleted INTEGER NOT NULL DEFAULT 0,
+      updatedAt TEXT NOT NULL,
+      PRIMARY KEY (userId, lessonId)
+    );
   `);
 }
 
@@ -580,6 +601,8 @@ function seedDbObject() {
       flagHash: hashFlag(flag),
     })),
     submissions: [],
+    enrollments: [],
+    lessonProgress: [],
   };
 }
 
@@ -616,6 +639,14 @@ function readDbRaw() {
         ...submission,
         isCorrect: Boolean(submission.isCorrect),
       })),
+    enrollments: db.prepare("SELECT userId, courseSlug, createdAt FROM enrollments ORDER BY createdAt").all(),
+    lessonProgress: db
+      .prepare("SELECT userId, lessonId, theoryCompleted, updatedAt FROM lesson_progress ORDER BY updatedAt")
+      .all()
+      .map((progress) => ({
+        ...progress,
+        theoryCompleted: Boolean(progress.theoryCompleted),
+      })),
   };
 }
 
@@ -630,7 +661,7 @@ function writeDb(next) {
   const db = getSqlite();
   db.exec("BEGIN IMMEDIATE");
   try {
-    db.exec("DELETE FROM submissions; DELETE FROM challenges; DELETE FROM lessons; DELETE FROM courses; DELETE FROM users;");
+    db.exec("DELETE FROM lesson_progress; DELETE FROM enrollments; DELETE FROM submissions; DELETE FROM challenges; DELETE FROM lessons; DELETE FROM courses; DELETE FROM users;");
 
     const insertUser = db.prepare("INSERT INTO users (id, email, name, passwordHash, role, points, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)");
     for (const user of next.users) {
@@ -655,6 +686,16 @@ function writeDb(next) {
     const insertSubmission = db.prepare("INSERT INTO submissions (id, userId, challengeId, submittedHash, isCorrect, createdAt) VALUES (?, ?, ?, ?, ?, ?)");
     for (const submission of next.submissions) {
       insertSubmission.run(submission.id, submission.userId, submission.challengeId, submission.submittedHash || hashFlag(submission.submittedValue || ""), submission.isCorrect ? 1 : 0, submission.createdAt || new Date().toISOString());
+    }
+
+    const insertEnrollment = db.prepare("INSERT OR IGNORE INTO enrollments (userId, courseSlug, createdAt) VALUES (?, ?, ?)");
+    for (const enrollment of next.enrollments || []) {
+      insertEnrollment.run(enrollment.userId, enrollment.courseSlug, enrollment.createdAt || new Date().toISOString());
+    }
+
+    const insertLessonProgress = db.prepare("INSERT OR REPLACE INTO lesson_progress (userId, lessonId, theoryCompleted, updatedAt) VALUES (?, ?, ?, ?)");
+    for (const progress of next.lessonProgress || []) {
+      insertLessonProgress.run(progress.userId, progress.lessonId, progress.theoryCompleted ? 1 : 0, progress.updatedAt || new Date().toISOString());
     }
     db.exec("COMMIT");
   } catch (error) {
@@ -825,6 +866,76 @@ function totalProgress(db, user) {
   };
 }
 
+function enrolledCourseSlugs(db, user) {
+  if (!user) return new Set();
+  return new Set(db.enrollments.filter((item) => item.userId === user.id).map((item) => item.courseSlug));
+}
+
+function isEnrolled(db, user, courseSlug) {
+  return enrolledCourseSlugs(db, user).has(courseSlug);
+}
+
+function lessonTheoryCompleted(db, user, lessonId) {
+  if (!user) return false;
+  return db.lessonProgress.some((item) => item.userId === user.id && item.lessonId === lessonId && item.theoryCompleted);
+}
+
+function courseLearningProgress(db, user, courseSlug) {
+  const lessons = db.lessons.filter((lesson) => lesson.courseSlug === courseSlug);
+  const challenges = db.challenges.filter((challenge) => challenge.courseSlug === courseSlug);
+  const solved = solvedChallengeIds(db, user);
+  const theoryDone = lessons.filter((lesson) => lessonTheoryCompleted(db, user, lesson.id)).length;
+  const practiceDone = challenges.filter((challenge) => solved.has(challenge.id)).length;
+  const totalSteps = lessons.length + challenges.length;
+  const doneSteps = theoryDone + practiceDone;
+  return {
+    lessons: lessons.length,
+    challenges: challenges.length,
+    theoryDone,
+    practiceDone,
+    totalSteps,
+    doneSteps,
+    percent: totalSteps ? Math.round((doneSteps / totalSteps) * 100) : 0,
+  };
+}
+
+function selectedTotalProgress(db, user) {
+  const selected = db.courses.filter((course) => isEnrolled(db, user, course.slug));
+  const totals = selected.reduce(
+    (acc, course) => {
+      const progress = courseLearningProgress(db, user, course.slug);
+      acc.done += progress.doneSteps;
+      acc.total += progress.totalSteps;
+      return acc;
+    },
+    { done: 0, total: 0 }
+  );
+  return {
+    selected: selected.length,
+    done: totals.done,
+    total: totals.total,
+    percent: totals.total ? Math.round((totals.done / totals.total) * 100) : 0,
+  };
+}
+
+function nextLearningHref(db, user) {
+  const selected = db.enrollments
+    .filter((enrollment) => enrollment.userId === user.id)
+    .map((enrollment) => db.courses.find((course) => course.slug === enrollment.courseSlug))
+    .filter(Boolean);
+  for (const course of selected) {
+    const lessons = db.lessons.filter((lesson) => lesson.courseSlug === course.slug).sort((a, b) => a.order - b.order);
+    for (const lesson of lessons) {
+      if (!lessonTheoryCompleted(db, user, lesson.id)) return `/lesson/${lesson.id}`;
+      const challenges = db.challenges.filter((challenge) => challenge.lessonId === lesson.id);
+      const solved = solvedChallengeIds(db, user);
+      const nextChallenge = challenges.find((challenge) => !solved.has(challenge.id));
+      if (nextChallenge) return `/challenge/${nextChallenge.id}`;
+    }
+  }
+  return selected[0] ? `/courses/${selected[0].slug}` : "/courses";
+}
+
 function difficultyLabel(value) {
   return (
     {
@@ -904,6 +1015,12 @@ main{min-height:calc(100vh - 64px)}
 .command-palette{display:flex;flex-wrap:wrap;gap:8px}
 .command-palette button{min-height:32px;padding:0 10px;border:1px solid rgba(94,234,212,.28);border-radius:6px;background:rgba(20,184,166,.08);color:#99f6e4;font:13px Consolas,'Courier New',monospace;cursor:pointer}
 .terminal-line{display:block}.terminal-line.prompt{color:#5eead4}.terminal-line.error{color:#fecdd3}
+.lesson-steps{display:grid;gap:14px;margin-bottom:18px}
+.locked{border-style:dashed;background:linear-gradient(180deg,rgba(15,23,42,.72),rgba(15,23,42,.5))}
+.checklist{display:grid;gap:10px;margin:12px 0 0;padding-left:22px;color:#cfe3ff;line-height:1.55}
+.checklist li::marker{color:#5eead4}
+.inline-form{margin:14px 0 22px}
+.inline-form .button{width:auto}
 .app-header{border-bottom-color:rgba(94,234,212,.18)}
 .nav a,.nav button{padding:8px 0}
 .eyebrow{color:#5eead4;font-size:12px;font-weight:800;text-transform:uppercase}
@@ -1030,7 +1147,9 @@ function profile(req, res) {
   const db = readDb();
   const solved = db.submissions.filter((s) => s.userId === user.id && s.isCorrect);
   const uniqueSolved = new Set(solved.map((s) => s.challengeId));
-  const overall = totalProgress(db, user);
+  const overall = selectedTotalProgress(db, user);
+  const selectedCourses = db.courses.filter((course) => isEnrolled(db, user, course.slug));
+  const continueHref = nextLearningHref(db, user);
   const recentSolved = [...solved]
     .slice(-4)
     .reverse()
@@ -1040,17 +1159,18 @@ function profile(req, res) {
       return `<div class="leader-row"><strong>OK</strong><div><strong>${escapeHtml(challenge?.title || "Задание")}</strong><br><span>${escapeHtml(course?.title || "Курс")}</span></div><span>${new Date(submission.createdAt).toLocaleDateString("ru-RU")}</span></div>`;
     })
     .join("");
-  const progressRows = db.courses
+  const progressRows = selectedCourses
     .map((course) => {
-      const progress = courseProgress(db, user, course.slug);
+      const progress = courseLearningProgress(db, user, course.slug);
       return `<div class="challenge">
-        <div class="badges"><span class="badge accent">${escapeHtml(course.track)}</span><span class="badge">${progress.done}/${progress.total} заданий</span></div>
+        <div class="badges"><span class="badge accent">${escapeHtml(course.track)}</span><span class="badge">${progress.theoryDone}/${progress.lessons} теория</span><span class="badge">${progress.practiceDone}/${progress.challenges} практика</span></div>
         <h3>${escapeHtml(course.title)}</h3>
         <div class="progress"><span style="width:${progress.percent}%"></span></div>
-        <p>${progress.percent}% завершено</p>
+        <p>${progress.percent}% завершено по выбранному направлению</p>
+        <a class="button-link" href="/courses/${course.slug}">Открыть курс</a>
       </div>`;
     })
-    .join("");
+    .join("") || `<div class="challenge"><h3>Выберите первое направление</h3><p class="muted">Профиль будет показывать прогресс только по тем курсам, которые студент сам добавил в обучение.</p><a class="button-link primary" href="/courses">Выбрать курс</a></div>`;
   send(
     res,
     layout({
@@ -1063,15 +1183,15 @@ function profile(req, res) {
       <h1>${escapeHtml(user.name)}</h1>
       <p class="muted">${escapeHtml(user.email)}</p>
     </div>
-    <a class="button-link primary" href="/courses">Продолжить обучение</a>
+    <a class="button-link primary" href="${continueHref}">Продолжить обучение</a>
   </div>
   <div class="stats">
     <div class="stat"><strong>${user.points}</strong><span>очков</span></div>
-    <div class="stat"><strong>${overall.percent}%</strong><span>${uniqueSolved.size}/${overall.total} заданий решено</span></div>
-    <div class="stat"><strong>${db.courses.length}</strong><span>доступных курсов</span></div>
+    <div class="stat"><strong>${overall.percent}%</strong><span>${overall.done}/${overall.total || 0} шагов завершено</span></div>
+    <div class="stat"><strong>${overall.selected}</strong><span>выбранных курсов</span></div>
   </div>
   <div class="progress"><span style="width:${overall.percent}%"></span></div>
-  <div class="section-heading"><h1>Прогресс по курсам</h1><p>Процент считается по решенным практическим заданиям.</p></div>
+  <div class="section-heading"><h1>Мои направления</h1><p>Здесь отображаются только курсы, которые студент выбрал сам. Прогресс учитывает прочитанную теорию и решённую практику.</p></div>
   <div class="challenge-list">${progressRows}</div>
   <div class="section-heading"><h1>Последние решения</h1><p>Краткая история успешных флагов для демонстрации результата обучения.</p></div>
   <div class="leader-list">${recentSolved || `<div class="challenge"><p class="muted">Пока нет решенных заданий. Начните с курса Linux & Networks Basics.</p></div>`}</div>
@@ -1094,15 +1214,21 @@ function courses(req, res) {
     }[track] || "CY");
   const cards = db.courses
     .map((course) => {
-      const progress = courseProgress(db, user, course.slug);
+      const selected = isEnrolled(db, user, course.slug);
+      const progress = courseLearningProgress(db, user, course.slug);
       const lessonCount = db.lessons.filter((lesson) => lesson.courseSlug === course.slug).length;
+      const action = user
+        ? selected
+          ? `<a class="button-link primary" href="/courses/${course.slug}">${progress.percent > 0 ? "Продолжить" : "Открыть курс"}</a>`
+          : `<form method="post" action="/courses/${course.slug}/enroll"><button class="button primary" type="submit">Добавить в обучение</button></form>`
+        : `<a class="button-link primary" href="/register">Начать обучение</a>`;
       return `<article class="card">
-  <div class="card-top"><span class="course-icon">${escapeHtml(trackIcon(course.track))}</span><div class="badges"><span class="badge accent">${escapeHtml(course.track)}</span><span class="badge">${escapeHtml(difficultyLabel(course.difficulty))}</span></div></div>
+  <div class="card-top"><span class="course-icon">${escapeHtml(trackIcon(course.track))}</span><div class="badges"><span class="badge accent">${escapeHtml(course.track)}</span><span class="badge">${escapeHtml(difficultyLabel(course.difficulty))}</span>${selected ? `<span class="badge accent">В обучении</span>` : ""}</div></div>
   <h3>${escapeHtml(course.title)}</h3>
   <p>${escapeHtml(course.description)}</p>
   <div class="progress"><span style="width:${progress.percent}%"></span></div>
-  <div class="badges"><span class="badge">${lessonCount} урока</span><span class="badge">${progress.done}/${progress.total} заданий</span><span class="badge">${progress.percent}% завершено</span></div>
-  <a class="button-link primary" href="/courses/${course.slug}">${progress.percent > 0 ? "Продолжить" : "Начать курс"}</a>
+  <div class="badges"><span class="badge">${lessonCount} урока</span><span class="badge">${progress.theoryDone}/${progress.lessons} теория</span><span class="badge">${progress.practiceDone}/${progress.challenges} практика</span></div>
+  ${action}
 </article>`;
     })
     .join("");
@@ -1119,12 +1245,26 @@ function courses(req, res) {
   );
 }
 
+async function enrollCourse(req, res, slug) {
+  const user = getCurrentUser(req);
+  if (!user) return redirect(res, "/login");
+  const db = readDb();
+  const course = db.courses.find((item) => item.slug === slug);
+  if (!course) return send(res, "Курс не найден", 404);
+  if (!isEnrolled(db, user, slug)) {
+    db.enrollments.push({ userId: user.id, courseSlug: slug, createdAt: new Date().toISOString() });
+    writeDb(db);
+  }
+  redirect(res, `/courses/${slug}`);
+}
+
 function coursePage(req, res, slug) {
   const user = getCurrentUser(req);
   const db = readDb();
   const course = db.courses.find((item) => item.slug === slug);
   if (!course) return send(res, "Курс не найден", 404);
-  const progress = courseProgress(db, user, course.slug);
+  const progress = courseLearningProgress(db, user, course.slug);
+  const selected = isEnrolled(db, user, course.slug);
   const solved = solvedChallengeIds(db, user);
   const lessons = db.lessons
     .filter((lesson) => lesson.courseSlug === course.slug)
@@ -1132,8 +1272,10 @@ function coursePage(req, res, slug) {
     .map((lesson) => {
       const challenges = db.challenges.filter((challenge) => challenge.lessonId === lesson.id);
       const solvedCount = challenges.filter((challenge) => solved.has(challenge.id)).length;
+      const theoryDone = lessonTheoryCompleted(db, user, lesson.id);
+      const lessonDone = theoryDone && challenges.length > 0 && solvedCount === challenges.length;
       return `<div class="challenge">
-        <div class="badges"><span class="badge accent">Урок ${lesson.order}</span><span class="badge">${solvedCount}/${challenges.length} заданий</span></div>
+        <div class="badges"><span class="badge accent">Урок ${lesson.order}</span><span class="badge ${theoryDone ? "accent" : ""}">${theoryDone ? "Теория изучена" : "Теория"}</span><span class="badge">${solvedCount}/${challenges.length} практика</span>${lessonDone ? `<span class="badge accent">Завершён</span>` : ""}</div>
         <h3>${escapeHtml(lesson.title)}</h3>
         <p>${escapeHtml(lesson.summary)}</p>
         <a class="button-link primary" href="/lesson/${lesson.id}">Открыть урок</a>
@@ -1148,8 +1290,9 @@ function coursePage(req, res, slug) {
       body: `<section class="page course-layout">
   <div>
     <div class="section-heading"><h1>${escapeHtml(course.title)}</h1><p>${escapeHtml(course.description)}</p></div>
+    ${user && !selected ? `<form class="inline-form" method="post" action="/courses/${course.slug}/enroll"><button class="button primary" type="submit">Добавить курс в моё обучение</button></form>` : ""}
     <div class="progress"><span style="width:${progress.percent}%"></span></div>
-    <p class="section-copy">${progress.done}/${progress.total} заданий решено, ${progress.percent}% курса завершено.</p>
+    <p class="section-copy">${progress.doneSteps}/${progress.totalSteps} учебных шагов завершено: ${progress.theoryDone}/${progress.lessons} теория и ${progress.practiceDone}/${progress.challenges} практика.</p>
     <div class="challenge-list">${lessons}</div>
   </div>
   <aside class="panel">
@@ -1161,6 +1304,64 @@ function coursePage(req, res, slug) {
   );
 }
 
+async function completeTheory(req, res, id) {
+  const user = getCurrentUser(req);
+  if (!user) return redirect(res, "/login");
+  const db = readDb();
+  const lesson = db.lessons.find((item) => item.id === id);
+  if (!lesson) return send(res, "Урок не найден", 404);
+  if (!isEnrolled(db, user, lesson.courseSlug)) {
+    db.enrollments.push({ userId: user.id, courseSlug: lesson.courseSlug, createdAt: new Date().toISOString() });
+  }
+  const existing = db.lessonProgress.find((item) => item.userId === user.id && item.lessonId === id);
+  if (existing) {
+    existing.theoryCompleted = true;
+    existing.updatedAt = new Date().toISOString();
+  } else {
+    db.lessonProgress.push({ userId: user.id, lessonId: id, theoryCompleted: true, updatedAt: new Date().toISOString() });
+  }
+  writeDb(db);
+  redirect(res, `/lesson/${id}`);
+}
+
+function lessonExample(lessonId) {
+  const examples = {
+    "linux-files": "Если обычный список файлов не показывает цель, попробуйте показать скрытые элементы. В Linux файлы вида .flag не видны в простом выводе, поэтому полезна команда ls -la, а затем чтение нужного файла через cat.",
+    "linux-networking": "Смотрите на связку адрес + порт + протокол. Если сервис указан как 80/tcp, это почти всегда HTTP. В учебной среде нужно подтвердить, какой сервис открыт и почему это важно для веб-доступа.",
+    "web-sqli": "Сравните обычный вход и вход, где пользовательский ввод меняет условие SQL-запроса. Если строка собирается склейкой, payload может превратить проверку пароля в всегда истинное условие.",
+    "web-xss": "Введите безопасный тестовый HTML/JS в учебную форму и посмотрите, выводится ли он как текст или выполняется как разметка. Главная идея: браузер не должен исполнять ввод пользователя.",
+    "blue-logs": "Сначала найдите повторяющийся источник событий, затем сравните успешные и неуспешные попытки. Много failed login с одного IP за короткое время похоже на brute force.",
+    "blue-incident": "Разложите события по времени: что случилось первым, что было следствием, где появился риск. Таймлайн помогает объяснить инцидент без хаоса.",
+    "red-recon": "Работайте только в заданной учебной области. Сначала прочитайте разрешённый scope, затем ищите открытые учебные признаки: страницы, заголовки, версии, подсказки.",
+    "red-methodology": "Находка полезна только тогда, когда её можно воспроизвести и исправить. Фиксируйте шаги, риск, доказательство и рекомендацию для защитников.",
+    "forensics-metadata": "Файл может хранить автора, время создания, приложение и историю изменений. Эти свойства не доказывают всё сами по себе, но дают направление расследованию.",
+    "forensics-timeline": "Соберите артефакты в порядке времени. Если файл изменён после подозрительного входа, это может быть важной связью между событиями.",
+    "appsec-threat-model": "Опишите активы, роли, границы доверия и возможные злоупотребления. После этого выберите защитные меры до написания кода.",
+    "appsec-data-protection": "Секреты и персональные данные нельзя хранить как обычный текст или выводить в логи. Минимизируйте данные, хешируйте секреты и разделяйте доступ.",
+  };
+  return escapeHtml(examples[lessonId] || "Разберите теорию, повторите пример в учебной среде и переходите к практике только после того, как понятна логика решения.");
+}
+
+function lessonChecklist(lessonId) {
+  const common = ["что именно нужно найти", "какая команда или проверка подходит", "почему ответ безопасно искать только в учебной среде"];
+  const items =
+    {
+      "linux-files": ["чем отличается обычный и подробный список файлов", "почему скрытые файлы начинаются с точки", "как прочитать содержимое найденного файла"],
+      "linux-networking": ["что означает порт 80/tcp", "чем DNS отличается от HTTP", "как определить сервис по порту"],
+      "web-sqli": ["как пользовательский ввод попадает в запрос", "почему склейка SQL-строк опасна", "чем параметризованный запрос безопаснее"],
+      "web-xss": ["что такое отражённый ввод", "почему нужно экранирование", "как отличить текст от исполняемой разметки"],
+      "blue-logs": ["где источник события", "сколько повторов произошло", "какой признак указывает на атаку"],
+      "blue-incident": ["какое событие было первым", "что является следствием", "какой вывод можно объяснить по таймлайну"],
+      "red-recon": ["какой scope разрешён", "что нельзя проверять", "какие признаки можно искать в учебной цели"],
+      "red-methodology": ["как воспроизвести находку", "какой риск она создаёт", "какую рекомендацию дать защитникам"],
+      "forensics-metadata": ["какие свойства файла важны", "почему автор может быть следом", "как сохранить вывод для отчёта"],
+      "forensics-timeline": ["какие события есть", "как отсортировать их по времени", "какая связь между событиями важна"],
+      "appsec-threat-model": ["какие активы защищаем", "где граница доверия", "какие меры снижают риск"],
+      "appsec-data-protection": ["какие данные являются чувствительными", "что нельзя писать в логи", "зачем нужны хеши и роли доступа"],
+    }[lessonId] || common;
+  return `<ul class="checklist">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
 function lessonPage(req, res, id) {
   const user = getCurrentUser(req);
   const db = readDb();
@@ -1168,7 +1369,9 @@ function lessonPage(req, res, id) {
   if (!lesson) return send(res, "Урок не найден", 404);
   const course = db.courses.find((item) => item.slug === lesson.courseSlug);
   const solved = solvedChallengeIds(db, user);
-  const challenges = db.challenges
+  const selected = isEnrolled(db, user, lesson.courseSlug);
+  const theoryDone = lessonTheoryCompleted(db, user, lesson.id);
+  const challengeCards = db.challenges
     .filter((challenge) => challenge.lessonId === lesson.id)
     .map((challenge) => `<div class="challenge">
       <div class="badges"><span class="badge">${escapeHtml(challenge.difficulty)}</span><span class="badge accent">${challenge.points} points</span>${solved.has(challenge.id) ? `<span class="badge accent">Решено</span>` : ""}</div>
@@ -1177,6 +1380,13 @@ function lessonPage(req, res, id) {
       <a class="button-link primary" href="/challenge/${challenge.id}">Перейти к заданию</a>
     </div>`)
     .join("");
+  const practiceBlock = !user
+    ? `<div class="challenge locked"><h3>Практика доступна после входа</h3><p class="muted">Создайте аккаунт, выберите курс и пройдите теорию, чтобы сохранять прогресс.</p><a class="button-link primary" href="/register">Зарегистрироваться</a></div>`
+    : !selected
+      ? `<div class="challenge locked"><h3>Сначала добавьте курс в обучение</h3><p class="muted">После выбора курса он появится в профиле, а прогресс будет считаться только по этому направлению.</p><form class="inline-form" method="post" action="/courses/${course.slug}/enroll"><button class="button primary" type="submit">Добавить курс</button></form></div>`
+      : theoryDone
+        ? challengeCards
+        : `<div class="challenge locked"><h3>Практика пока закрыта</h3><p class="muted">Сначала прочитайте материал урока и нажмите “Я изучил материал”. Так студент двигается от теории к практике, а не угадывает флаг вслепую.</p></div>`;
   send(
     res,
     layout({
@@ -1184,10 +1394,17 @@ function lessonPage(req, res, id) {
       user,
       body: `<section class="page course-layout">
   <div>
-    <div class="section-heading"><h1>${escapeHtml(lesson.title)}</h1><p>${escapeHtml(lesson.summary)}</p></div>
-    <div class="challenge"><p>${escapeHtml(lesson.theory)}</p></div>
+    <div class="section-heading"><div class="eyebrow">Lesson path</div><h1>${escapeHtml(lesson.title)}</h1><p>${escapeHtml(lesson.summary)}</p></div>
+    <div class="lesson-steps">
+      <div class="challenge"><div class="badges"><span class="badge accent">1</span><span class="badge">Предисловие</span></div><h3>Зачем это нужно</h3><p class="muted">Этот урок даёт базу, без которой практическое задание превращается в угадывание. Сначала разберитесь с идеей, затем повторите пример и только после этого переходите к флагу.</p></div>
+      <div class="challenge"><div class="badges"><span class="badge accent">2</span><span class="badge">Теория</span></div><h3>Обучающий материал</h3><p>${escapeHtml(lesson.theory)}</p></div>
+      <div class="challenge"><div class="badges"><span class="badge accent">3</span><span class="badge">Пример</span></div><h3>Как применять на практике</h3><p class="muted">${lessonExample(lesson.id)}</p></div>
+      <div class="challenge"><div class="badges"><span class="badge accent">4</span><span class="badge">Чеклист</span></div><h3>Перед практикой студент должен понимать</h3>${lessonChecklist(lesson.id)}</div>
+    </div>
+    ${user && selected && !theoryDone ? `<form class="inline-form" method="post" action="/lesson/${lesson.id}/complete-theory"><button class="button primary" type="submit">Я изучил материал</button></form>` : ""}
+    ${theoryDone ? `<div class="notice ok">Теория отмечена как изученная. Практика открыта.</div>` : ""}
     <div class="section-heading"><h1>Практика</h1><p>Решите задания урока и отправьте флаги.</p></div>
-    <div class="challenge-list">${challenges}</div>
+    <div class="challenge-list">${practiceBlock}</div>
   </div>
   <aside class="panel">
     <h1>${escapeHtml(course.title)}</h1>
@@ -1545,6 +1762,9 @@ async function terminalCommand(req, res, id) {
   const db = readDb();
   const challenge = db.challenges.find((item) => item.id === id);
   if (!challenge) return sendJson(res, { ok: false, output: "Задание не найдено." }, 404);
+  if (!isEnrolled(db, user, challenge.courseSlug) || !lessonTheoryCompleted(db, user, challenge.lessonId)) {
+    return sendJson(res, { ok: false, output: "Сначала выберите курс и отметьте теорию урока как изученную." }, 403);
+  }
   const form = await readBody(req);
   return sendJson(res, terminalOutput(id, form.get("command")));
 }
@@ -1557,6 +1777,9 @@ function challengePage(req, res, id, message = "") {
   if (!challenge) return send(res, "Задание не найдено", 404);
   const course = db.courses.find((item) => item.slug === challenge.courseSlug);
   const lesson = db.lessons.find((item) => item.id === challenge.lessonId);
+  if (!isEnrolled(db, user, challenge.courseSlug) || !lessonTheoryCompleted(db, user, challenge.lessonId)) {
+    return redirect(res, `/lesson/${challenge.lessonId}`);
+  }
   const attempts = db.submissions
     .filter((submission) => submission.userId === user.id && submission.challengeId === challenge.id)
     .slice(-5)
@@ -1622,6 +1845,9 @@ async function submitFlag(req, res, id) {
   const db = readDb();
   const challenge = db.challenges.find((item) => item.id === id);
   if (!challenge) return send(res, "Задание не найдено", 404);
+  if (!isEnrolled(db, user, challenge.courseSlug) || !lessonTheoryCompleted(db, user, challenge.lessonId)) {
+    return redirect(res, `/lesson/${challenge.lessonId}`);
+  }
 
   const isCorrect = hashFlag(flag) === challenge.flagHash;
   const alreadySolved = db.submissions.some((s) => s.userId === user.id && s.challengeId === id && s.isCorrect);
@@ -2140,8 +2366,14 @@ async function router(req, res) {
   if (req.method === "POST" && url.pathname === "/admin/lesson") return createLesson(req, res);
   if (req.method === "POST" && url.pathname === "/admin/challenge") return createChallenge(req, res);
   if (req.method === "GET" && url.pathname === "/courses") return courses(req, res);
+  if (req.method === "POST" && url.pathname.startsWith("/courses/") && url.pathname.endsWith("/enroll")) {
+    return enrollCourse(req, res, decodeURIComponent(url.pathname.split("/")[2]));
+  }
   if (req.method === "GET" && url.pathname.startsWith("/courses/")) {
     return coursePage(req, res, decodeURIComponent(url.pathname.split("/")[2]));
+  }
+  if (req.method === "POST" && url.pathname.startsWith("/lesson/") && url.pathname.endsWith("/complete-theory")) {
+    return completeTheory(req, res, decodeURIComponent(url.pathname.split("/")[2]));
   }
   if (req.method === "GET" && url.pathname.startsWith("/lesson/")) {
     return lessonPage(req, res, decodeURIComponent(url.pathname.split("/")[2]));

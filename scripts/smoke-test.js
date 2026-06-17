@@ -28,6 +28,8 @@ function cleanupSmokeUser() {
   try {
     const user = db.prepare("SELECT id FROM users WHERE email = ?").get(smokeEmail);
     if (user) {
+      db.prepare("DELETE FROM lesson_progress WHERE userId = ?").run(user.id);
+      db.prepare("DELETE FROM enrollments WHERE userId = ?").run(user.id);
       db.prepare("DELETE FROM submissions WHERE userId = ?").run(user.id);
       db.prepare("DELETE FROM users WHERE id = ?").run(user.id);
     }
@@ -66,6 +68,21 @@ async function main() {
   assert(result.response.status === 302, `register expected 302, got ${result.response.status}`);
   const cookie = result.response.headers.get("set-cookie")?.split(";")[0];
   assert(cookie, "register did not set a session cookie");
+
+  result = await request("/courses/linux-networks/enroll", {
+    method: "POST",
+    headers: { cookie },
+  });
+  assert(result.response.status === 302, `course enroll expected 302, got ${result.response.status}`);
+
+  result = await request("/challenge/linux-open-port", { headers: { cookie } });
+  assert(result.response.status === 302, "challenge must redirect to lesson before theory is completed");
+
+  result = await request("/lesson/linux-networking/complete-theory", {
+    method: "POST",
+    headers: { cookie },
+  });
+  assert(result.response.status === 302, `complete theory expected 302, got ${result.response.status}`);
 
   result = await request("/challenge/linux-open-port/submit", {
     method: "POST",
